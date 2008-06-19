@@ -196,12 +196,15 @@ trait Mapper[A<:Mapper[A]] { self: A =>
   */ 
   def fieldByName[T](fieldName: String): Can[MappedField[T, A]] = getSingleton.fieldByName[T](fieldName, this)  
   
+  /*
   type FieldPf = PartialFunction[String, NodeSeq => NodeSeq]
   
   def fieldMapperPf(transform: (BaseOwnedMappedField[A] => NodeSeq)): FieldPf = {
     getSingleton.fieldMapperPf(transform, this)
   }
+  */
   
+  /*
   private var fieldPf_i: FieldPf = Map.empty
   
   def fieldPf = fieldPf_i
@@ -215,6 +218,7 @@ trait Mapper[A<:Mapper[A]] { self: A =>
     fieldPf_i = pf orElse fieldPf_i
     fieldPf_i
   }
+  */
   
   /**
   * If there's a field in this record that defines the locale, return it

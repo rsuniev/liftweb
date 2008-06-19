@@ -142,7 +142,23 @@ trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField {
 
 }
 
-trait KeyField[MyType, OwnerType <: KeyedRecord[OwnerType, MyType]] extends Field[MyType, OwnerType]
+trait StringField[OwnerType <: Record[OwnerType]] extends Field[String, OwnerType]
+
+trait TimeZoneField[OwnerType <: Record[OwnerType]] extends StringField[OwnerType] {
+
+}
+
+trait CountryField[OwnerType <: Record[OwnerType]] extends StringField[OwnerType] {
+
+}
+
+trait LocaleField[OwnerType <: Record[OwnerType]] extends StringField[OwnerType] {
+
+}
+
+trait KeyField[MyType, OwnerType <: Record[OwnerType] with KeyedRecord[OwnerType, MyType]] extends Field[MyType, OwnerType] {
+  def ===(other: KeyField[MyType, OwnerType]): Boolean = this.value == other.value
+}
 
 abstract class LongFieldProto[OwnerType <: Record[OwnerType]](val owner: OwnerType) extends Field[Long, OwnerType] with JdbcLocator with XmlLocator {
   def defaultValue = 0
