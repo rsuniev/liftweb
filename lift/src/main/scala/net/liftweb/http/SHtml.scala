@@ -202,7 +202,7 @@ object SHtml {
   def submit_*(value: String, func: AFuncHolder): Elem = makeFormElement("submit", func) % new UnprefixedAttribute("value", Text(value), Null)
   def text(value: String, func: String => Any): Elem = makeFormElement("text", SFuncHolder(func)) % new UnprefixedAttribute("value", Text(value), Null)
   def password(value: String, func: String => Any): Elem = makeFormElement("password", SFuncHolder(func)) % new UnprefixedAttribute("value", Text(value), Null)
-  def hidden(func: String => Any): Elem = makeFormElement("hidden", SFuncHolder(func)) % ("value" -> "true")
+  def hidden(func: () => Unit): Elem = makeFormElement("hidden", SFuncHolder(ignore => func)) % ("value" -> "true")
   def submit(value: String, func: String => Any): Elem = makeFormElement("submit", SFuncHolder(func)) % new UnprefixedAttribute("value", Text(value), Null)
    
   def ajaxForm(body: NodeSeq) = (<lift:form>{body}</lift:form>)

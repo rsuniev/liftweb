@@ -1052,12 +1052,15 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
     }
   }
   
+/*
   override def afterSchemifier {
     if (crudSnippets_?) {
       LiftRules.addSnippetAfter(crudSnippets)
     }
   }  
-  
+*/
+
+/*  
   /**
    * Override this definition in your model to enable CRUD snippets
    * for that model. Set to false by default.
@@ -1094,6 +1097,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
     def callback(ignore: String) {
       cleanup(obj)
     }
+
     
     xbind(name, xhtml)(obj.fieldPf orElse obj.fieldMapperPf(_.toForm.openOr(Text(""))) orElse {
       case "submit" => label => SHtml.submit(label.text, callback)
@@ -1186,6 +1190,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
    * @param obj mapped object of this metamapper's type
    */
   def addSnippetCallback(obj: A) { obj.save } 
+*/
 }
 
 case class FieldHolder[T](name: String, method: Method, field: MappedField[_, T]) 
