@@ -24,30 +24,30 @@ trait Record[MyType <: Record[MyType]] {
   self: MyType =>
   
   /**
-  * A unique identifier for this record... used for access control
-  */
+   * A unique identifier for this record... used for access control
+   */
   private val secure_# = Safe.next
 
   /**
-  * Was this instance deleted from backing store?
-  */
+   * Was this instance deleted from backing store?
+   */
   private var was_deleted_? = false
   
   /**
-  * The meta record (the object that contains the meta result for this type)
-  */
+   * The meta record (the object that contains the meta result for this type)
+   */
   def meta: MetaRecord[MyType]
   
   /**
-  * Is it safe to make changes to the record (or should we check access control?)
-  */
-    final def safe_? : boolean = {
+   * Is it safe to make changes to the record (or should we check access control?)
+   */
+  final def safe_? : boolean = {
     Safe.safe_?(secure_#)
   }
   
-    /**
-  * Save the instance and return the instance
-  */
+  /**
+   * Save the instance and return the instance
+   */
   def save(): MyType = {
     runSafe {
       meta.save(this)
@@ -55,11 +55,11 @@ trait Record[MyType <: Record[MyType]] {
     this
   }
   
-    def runSafe[T](f : => T) : T = {
+  def runSafe[T](f : => T) : T = {
     Safe.runSafe(secure_#)(f)
   }
   
-    def htmlLine: NodeSeq = {
+  def htmlLine: NodeSeq = {
     meta.doHtmlLine(this)
   }
   
@@ -85,8 +85,8 @@ trait Record[MyType <: Record[MyType]] {
   }
   
   /**
-  * Delete the instance from backing store
-  */
+   * Delete the instance from backing store
+   */
   def delete_! : Boolean = {
     if (!db_can_delete_?) false else
     runSafe {
@@ -95,28 +95,28 @@ trait Record[MyType <: Record[MyType]] {
     }
   }
   
-    /**
-  * Can this model object be deleted?
-  */
+  /**
+   * Can this model object be deleted?
+   */
   def db_can_delete_? : Boolean =  meta.saved_?(this) && !was_deleted_?
   
   /**
-  * Present the model as a form and execute the function on submission of the form
-  *
-  * @param button - If it's Full, put a submit button on the form with the value of the parameter
-  * @param f - the function to execute on form submission
-  *
-  * @return the form
-  */
+   * Present the model as a form and execute the function on submission of the form
+   *
+   * @param button - If it's Full, put a submit button on the form with the value of the parameter
+   * @param f - the function to execute on form submission
+   *
+   * @return the form
+   */
   def toForm(f: MyType => Unit): NodeSeq =
   meta.toForm(this) ++ (SHtml.hidden(() => f(this)))
   
   /**
-  * Find the field by name
-  * @param fieldName -- the name of the field to find
-  *
-  * @return Can[MappedField]
-  */ 
+   * Find the field by name
+   * @param fieldName -- the name of the field to find
+   *
+   * @return Can[MappedField]
+   */ 
   def fieldByName[T](fieldName: String): Can[Field[T, MyType]] = meta.fieldByName[T](fieldName, this)  
 }
 
@@ -124,8 +124,8 @@ trait ExpandoRecord[MyType <: Record[MyType] with ExpandoRecord[MyType]] {
   self: MyType =>
 
   /**
-  * If there's a field in this record that defines the locale, return it
-  */
+   * If there's a field in this record that defines the locale, return it
+   */
   def localeField: Can[LocaleField[MyType]] = Empty
   
   def timeZoneField: Can[TimeZoneField[MyType]] = Empty
@@ -136,24 +136,24 @@ trait ExpandoRecord[MyType <: Record[MyType] with ExpandoRecord[MyType]] {
 trait DBRecord[MyType <: Record[MyType] with DBRecord[MyType]] {
   self: MyType =>
   
-    private var dbConnectionIdentifier:Can[ConnectionIdentifier] = Empty
+  private var dbConnectionIdentifier:Can[ConnectionIdentifier] = Empty
     
-    /**
-  * The meta record (the object that contains the meta result for this type)
-  */
+  /**
+   * The meta record (the object that contains the meta result for this type)
+   */
   def meta: DBMetaRecord[MyType]
   
-    def connectionIdentifier = dbConnectionIdentifier openOr calcDbId
+  def connectionIdentifier = dbConnectionIdentifier openOr calcDbId
   
   def dbCalculateConnectionIdentifier: PartialFunction[MyType, ConnectionIdentifier] = Map.empty
   
   private def calcDbId = if (dbCalculateConnectionIdentifier.isDefinedAt(this)) dbCalculateConnectionIdentifier(this)
   else meta.dbDefaultConnectionIdentifier
   
-    /**
-  * Append a function to perform after the commit happens
-  * @param func - the function to perform after the commit happens
-  */
+  /**
+   * Append a function to perform after the commit happens
+   * @param func - the function to perform after the commit happens
+   */
   def doPostCommit(func: () => Unit) {
     DB.appendPostFunc(connectionIdentifier, func)
   }
@@ -164,14 +164,14 @@ trait KeyedRecord[MyType <: KeyedRecord[MyType, KeyType] with Record[MyType], Ke
   
   def primaryKey: KeyField[KeyType, MyType]
   
-    def comparePrimaryKeys(other: MyType) = primaryKey === other.primaryKey
+  def comparePrimaryKeys(other: MyType) = primaryKey === other.primaryKey
 }
 
 trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   /**
-    * Convert the name and value of a field to a String.  Override this method
-    * to change its default behavior
-    */
+   * Convert the name and value of a field to a String.  Override this method
+   * to change its default behavior
+   */
   def fieldToString(name: String, strValue: String) = name+"="+strValue
   
   def fieldToXHtml(name: String, strValue: NodeSeq) = <xml:group><td>{name}</td><td>{strValue}</td></xml:group>
@@ -181,18 +181,18 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   def createWithMutatedField[FieldType](original: BaseRecord, field: Field[FieldType, BaseRecord], newValue: FieldType): BaseRecord = null.asInstanceOf[BaseRecord] // FIXME
   
   /**
-  * Save the instance in the appropriate backing store
-  */
+   * Save the instance in the appropriate backing store
+   */
   def save(inst: BaseRecord): Boolean
   
   /**
-  * Was this instance saved in backing store?
-  */
+   * Was this instance saved in backing store?
+   */
   def saved_?(inst: BaseRecord): Boolean
   
   /**
-  * Delete the instance from backing store
-  */
+   * Delete the instance from backing store
+   */
   def delete_!(inst: BaseRecord): Boolean
   
   def doHtmlLine(inst: BaseRecord): NodeSeq
@@ -205,13 +205,13 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   
   def toForm(inst: BaseRecord): NodeSeq
   
-    /**
-    * Get a field by the field name
-    * @param fieldName -- the name of the field to get
-    * @param actual -- the instance to get the field on
-    *
-    * @return Can[The Field] (Empty if the field is not found)
-    */
+  /**
+   * Get a field by the field name
+   * @param fieldName -- the name of the field to get
+   * @param actual -- the instance to get the field on
+   *
+   * @return Can[The Field] (Empty if the field is not found)
+   */
   def fieldByName[T](fieldName: String, inst: BaseRecord): Can[Field[T, BaseRecord]]
 }
 
@@ -220,21 +220,3 @@ trait DBMetaRecord[BaseRecord <: DBRecord[BaseRecord]] {
     def dbDefaultConnectionIdentifier: ConnectionIdentifier = DefaultConnectionIdentifier
 }
 
-/*
-trait KeyedMetaRecord[BaseRecord <: KeyedRecord[BaseRecord, KeyType], KeyType] extends MetaRecord[BaseRecord] { self: BaseRecord =>
-
-}*/
-
-/*
-object TestRecord extends TestRecord with MetaRecord[TestRecord] {
-  
-}
-*/
-  
-/*
-class TestRecord extends Record[TestRecord] {
-  def meta = TestRecord
-  
-  object longing extends LongField(this)
-}
-*/
