@@ -54,55 +54,52 @@ trait SimpleField extends FieldLocator {
   type SMyType
   type SOwnerType <: Record[SOwnerType]
 
-  private[this] var data: SMyType = _
-  private[this] var needsDefault = true
-      
+  private[record] var data: SMyType = _
+  private[record] var needsDefault = true
+  private[record] var obscured: SMyType = _
+
+  private[record] var _name: String = _
+  private[record] var owner: SOwnerType = _
+  
   /**
-    * The default value of the field
-    */
+   * Should the field be ignored by the OR Mapper?
+   */
+  def ignoreField_? = false
+
+  /**
+   * The default value of the field
+   */
   def defaultValue: SMyType
   
   /**
-    * The Record that owns this field
-    */ 
-  def owner: SOwnerType
-  
-  /**
-    * The text name of this field
-    */
+   * The text name of this field
+   */
   def name: String = _name
   
-  private[record] var _name: String = _
+  /**
+   * Convert the field to a String... usually of the form "displayName=value"
+   */
+  def asString = displayName + "=" + data
   
   /**
-    * Convert the field to a String... usually of the form "displayName=value"
-    */
-  def asString = owner.meta.fieldToString(displayName, toString)
-  
-  /**
-    * Convert the field a XHTML... by default in the form &lt;td&gt;displayName&lt;td&gt;&lt;/td&gt;value&lt;/td&gt;
-    */
-  def asXHtml = owner.meta.fieldToXHtml(displayName, toXHtml)
-  
-  /**
-    * Convert the field value to an XHTML representation
-    */
+   * Convert the field value to an XHTML representation
+   */
   def toXHtml = Text(toString)
   
   /**
-    * The display name of the field (by default, the 'internal' name of the field)
-    */
+   * The display name of the field (by default, the 'internal' name of the field)
+   */
   def displayName = name
   
   /**
-    * Can the value of this field be read without obscuring the result?
-    */
+   * Can the value of this field be read without obscuring the result?
+   */
   def canRead_? = owner.safe_? || checkCanRead_?
       
   /**
-    * If the owner is not in "safe" mode, check the current environment to see if
-    * the field can be read
-    */
+   * If the owner is not in "safe" mode, check the current environment to see if
+   * the field can be read
+   */
   def checkCanRead_? = true
       
   def fromString(in: String): Can[SMyType]
@@ -111,16 +108,17 @@ trait SimpleField extends FieldLocator {
       
   def checkCanWrite_? = true
   
-  private var obscured: SMyType = _
-   
   def obscure(in: SMyType): SMyType = obscured
   
   def set(in: SMyType): Unit = synchronized {
     if (checkCanWrite_?) {
-    data = in 
-    needsDefault = false
+      data = in 
+      needsDefault = false
     }
-    }
+  }
+  
+  def setFromAny(in: Any): Unit
+  
   def value: SMyType = synchronized{
     if (needsDefault) {data = defaultValue ; needsDefault = false} 
 
@@ -134,6 +132,20 @@ trait SimpleField extends FieldLocator {
   }
   
   def toForm: NodeSeq
+  
+  /**
+   * Are we in "safe" mode (i.e., the value of the field can be read or written without any security checks.)
+   */
+  final def safe_? : Boolean = owner.safe_?
+   
+  /**
+   * Set the name of this field
+   */
+  private[record] final def setName_!(newName : String) : String = {
+    if(safe_?) _name = newName
+    _name
+  }
+
 }
 
 trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField {
@@ -144,22 +156,8 @@ trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField {
     this.set(in)
     owner
   } else {
-    owner.meta.createWithMutatedField(owner, this, in)
+    owner.meta.createWithMutableField(owner, this, in)
   }
-
-}
-
-trait StringField[OwnerType <: Record[OwnerType]] extends Field[String, OwnerType]
-
-trait TimeZoneField[OwnerType <: Record[OwnerType]] extends StringField[OwnerType] {
-
-}
-
-trait CountryField[OwnerType <: Record[OwnerType]] extends StringField[OwnerType] {
-
-}
-
-trait LocaleField[OwnerType <: Record[OwnerType]] extends StringField[OwnerType] {
 
 }
 
@@ -167,7 +165,7 @@ trait KeyField[MyType, OwnerType <: Record[OwnerType] with KeyedRecord[OwnerType
   def ===(other: KeyField[MyType, OwnerType]): Boolean = this.value == other.value
 }
 
-abstract class LongFieldProto[OwnerType <: Record[OwnerType]](val owner: OwnerType) extends Field[Long, OwnerType] with JdbcLocator with XmlLocator {
+abstract class LongFieldProto[OwnerType <: Record[OwnerType]] extends Field[Long, OwnerType] with JdbcLocator with XmlLocator {
   def defaultValue = 0
   def fromString(in: String) = Full(Helpers.toLong(in))
 }
