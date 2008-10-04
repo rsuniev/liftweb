@@ -6,7 +6,7 @@ import scala.xml._
 import net.liftweb.mapper.{ConnectionIdentifier, Safe, DefaultConnectionIdentifier, DB, KeyObfuscator}
 
 
-trait DBRecord[MyType <: Record[MyType] with DBRecord[MyType]] {
+trait DBRecord[MyType <: BackendRecord[MyType] with DBRecord[MyType]] {
   self: MyType =>
   
   private var dbConnectionIdentifier:Can[ConnectionIdentifier] = Empty

@@ -30,11 +30,6 @@ trait Record[MyType <: Record[MyType]] {
   private val secure_# = Safe.next
 
   /**
-   * Was this instance deleted from backing store?
-   */
-  private var was_deleted_? = false
-  
-  /**
    * The meta record (the object that contains the meta result for this type)
    */
   def meta: MetaRecord[MyType]
@@ -42,19 +37,10 @@ trait Record[MyType <: Record[MyType]] {
   /**
    * Is it safe to make changes to the record (or should we check access control?)
    */
-  final def safe_? : boolean = {
+  final def safe_? : Boolean = {
     Safe.safe_?(secure_#)
   }
   
-  /**
-   * Save the instance and return the instance
-   */
-  def save(): MyType = {
-    runSafe {
-      meta.save(this)
-    }
-    this
-  }
   
   def runSafe[T](f : => T) : T = {
     Safe.runSafe(secure_#)(f)
@@ -65,10 +51,10 @@ trait Record[MyType <: Record[MyType]] {
   }
   
   /**
-  * If the instance calculates any additional
-  * fields for JSON object, put the calculated fields
-  * here
-  */
+   * If the instance calculates any additional
+   * fields for JSON object, put the calculated fields
+   * here
+   */
   def suplementalJs(ob: Can[KeyObfuscator]): List[(String, JsExp)] = Nil
   
   def validate : List[FieldError] = {
@@ -80,22 +66,6 @@ trait Record[MyType <: Record[MyType]] {
   def asJs: JsExp = {
     meta.asJs(this)
   }
-  
-  /**
-   * Delete the instance from backing store
-   */
-  def delete_! : Boolean = {
-    if (!db_can_delete_?) false else
-    runSafe {
-      was_deleted_? = meta.delete_!(this)
-      was_deleted_?
-    }
-  }
-  
-  /**
-   * Can this model object be deleted?
-   */
-  def db_can_delete_? : Boolean =  meta.saved_?(this) && !was_deleted_?
   
   /**
    * Present the model as a form and execute the function on submission of the form

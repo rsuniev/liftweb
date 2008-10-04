@@ -58,7 +58,7 @@ trait SimpleField extends FieldLocator {
   private[record] var needsDefault = true
   private[record] var obscured: SMyType = _
 
-  private[record] var _name: String = _
+  private[record] var fieldName: String = _
   private[record] var owner: SOwnerType = _
   
   /**
@@ -74,7 +74,7 @@ trait SimpleField extends FieldLocator {
   /**
    * The text name of this field
    */
-  def name: String = _name
+  def name: String = fieldName
   
   /**
    * Convert the field to a String... usually of the form "displayName=value"
@@ -142,8 +142,8 @@ trait SimpleField extends FieldLocator {
    * Set the name of this field
    */
   private[record] final def setName_!(newName : String) : String = {
-    if(safe_?) _name = newName
-    _name
+    if(safe_?) fieldName = newName
+    fieldName
   }
 
 }

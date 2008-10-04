@@ -19,21 +19,6 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
       
   def createWithMutableField[FieldType](original: BaseRecord, field: Field[FieldType, BaseRecord], newValue: FieldType): BaseRecord = null.asInstanceOf[BaseRecord] // FIXME
   
-  /**
-   * Save the instance in the appropriate backing store
-   */
-  def save(inst: BaseRecord): Boolean = true
-  
-  /**
-   * Was this instance saved in backing store?
-   */
-  def saved_?(inst: BaseRecord): Boolean = true
-  
-  /**
-   * Delete the instance from backing store
-   */
-  def delete_!(inst: BaseRecord): Boolean = true
-  
   def asHtml(inst: BaseRecord): NodeSeq = NodeSeq.Empty
   
   def validate(toValidate: BaseRecord): List[FieldError] = Nil // TODO - implement this  
