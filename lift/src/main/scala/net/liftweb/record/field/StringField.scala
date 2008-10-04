@@ -38,7 +38,7 @@ abstract class StringField[OwnerType <: Record[OwnerType]](maxLength: Int) exten
   
   override def toForm = <input type="text" maxlength={maxLength.toString} 
 	 name={S.mapFunc({s: List[String] => this.setFromAny(s)})} 
-	 value={data match {case null => "" case s => s.toString}}/> 
+	 value={value match {case null => "" case s => s.toString}}/> 
   
   override def defaultValue = ""
   
