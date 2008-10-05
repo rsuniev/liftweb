@@ -8,19 +8,21 @@ import S._
 /**
  * A Field containing String content.
  */
-abstract class StringField[OwnerType <: Record[OwnerType]](maxLength: Int) extends Field[String, OwnerType] {
+abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int) extends Field[String, OwnerType] {
   
-  def this(maxLength: Int, value: String) = {
-    this(maxLength)
+  def this(rec: OwnerType, maxLength: Int, value: String) = {
+    this(rec, maxLength)
     set(value)
   } 
 
-  def this(value: String) = {
-    this(-1)
+  def this(rec: OwnerType, value: String) = {
+    this(rec, -1)
     set(value)
   } 
   
   override def fromString(in: String) = Full(in)
+  
+  def owner = rec
   
   override def setFromAny(in: Any) {
     in match {

@@ -29,6 +29,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
     for (v <- methods  if isMagicObject(v) && isMappedField(v)) {
       v.invoke(rec, null) match {
         case mf: Field[_, BaseRecord] if !mf.ignoreField_? =>
+          mf.setName_!(v.getName)
           f(v, mf)
         case _ =>
       }
@@ -42,10 +43,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
     lifecycleCallbacks = for (v <- this.getClass.getSuperclass.getMethods.toList if isMagicObject(v) && isLifecycle(v)) yield (v.getName, v)
     
     introspect(this, this.getClass.getSuperclass.getMethods) {
-      case (v, mf) =>
-        mf.owner = MetaRecord.this;
-        mf.setName_!(v.getName)
-        tArray += FieldHolder(mf.name, v, mf)
+      case (v, mf) => tArray += FieldHolder(mf.name, v, mf)
     }
     
     def findPos(in: AnyRef) : Can[Int] = {
@@ -73,15 +71,19 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   def createRecord: BaseRecord = {
     val rec: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
     rec.runSafe {
-      introspect(rec, rec.getClass.getMethods) {
-        case (v, mf) =>
-          mf.owner = rec;
-          mf.setName_!(v.getName)
-        }
+      introspect(rec, rec.getClass.getMethods) {case (v, mf) =>}
     }
     rec
   }
   
+  /**
+   * Creates a new record setting the value of the fields from the original object but
+   * apply the new value for the specific field
+   * 
+   * @param - original the initial record
+   * @param - field the new mutated field
+   * @param - the new value of the field
+   */
   def createWithMutableField[FieldType](original: BaseRecord, 
                                         field: Field[FieldType, BaseRecord], 
                                         newValue: FieldType): BaseRecord = {
@@ -94,13 +96,13 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
           case _ =>
         }
         case false => rec.fieldByName(f.name) match {
-          case Full(field) => field.setFromAny(original.fieldByName(f.name) match {
-            case Full(origField) => origField.value 
-            case _ =>
-          }) 
+          case Full(field) => 
+            original.fieldByName(f.name) match {
+              case Full(origField) => field.setFromAny(origField.value)
+              case _ => 
+            }
           case _ =>
         }
-
       }
     }
     

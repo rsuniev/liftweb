@@ -59,7 +59,11 @@ trait SimpleField extends FieldLocator {
   private[record] var obscured: SMyType = _
 
   private[record] var fieldName: String = _
-  private[record] var owner: SOwnerType = _
+  
+  /**
+   * Return the owner of this field
+   */
+  def owner: SOwnerType
   
   /**
    * Should the field be ignored by the OR Mapper?
