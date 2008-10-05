@@ -91,18 +91,10 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   
     for (f <- fieldList) {
       (f.name == field.name) match {
-        case true => rec.fieldByName(f.name) match {
-          case Full(fld) => fld.setFromAny(newValue) 
-          case _ =>
-        }
-        case false => rec.fieldByName(f.name) match {
-          case Full(field) => 
-            original.fieldByName(f.name) match {
-              case Full(origField) => field.setFromAny(origField.value)
-              case _ => 
-            }
-          case _ =>
-        }
+        case true => rec.fieldByName(f.name).map((recField: Field[_, _]) => recField.setFromAny(newValue) )
+        case _ => rec.fieldByName(f.name).map((recField: Field[_, _]) => 
+          original.fieldByName(f.name).map((m: Field[_, _]) => recField.setFromAny(m.value)) 
+        )
       }
     }
     
