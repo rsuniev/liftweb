@@ -15,9 +15,93 @@ import field._
  */
 trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
    
+  private[record] var fieldList: List[FieldHolder[BaseRecord]] = Nil
+
+  private[record] var lifecycleCallbacks: List[(String, Method)] = Nil
+  
+  protected val rootClass = this.getClass.getSuperclass
+
+  private def isMagicObject(m: Method) = m.getReturnType.getName.endsWith("$"+m.getName+"$") && m.getParameterTypes.length == 0
+  private def isMappedField(m: Method) = classOf[Field[Nothing, BaseRecord]].isAssignableFrom(m.getReturnType)
+  private def isLifecycle(m: Method) = classOf[LifecycleCallbacks].isAssignableFrom(m.getReturnType)
+
+  this.runSafe {
+    val tArray = new ListBuffer[FieldHolder[BaseRecord]]
+    
+    lifecycleCallbacks = for (v <- this.getClass.getSuperclass.getMethods.toList if isMagicObject(v) && isLifecycle(v)) yield (v.getName, v)
+    
+    for (v <- this.getClass.getSuperclass.getMethods  if isMagicObject(v) && isMappedField(v)) {
+      v.invoke(this, null) match {
+        case mf: Field[_, BaseRecord] if !mf.ignoreField_? =>
+          mf.owner = this;
+          mf.setName_!(v.getName)
+          tArray += FieldHolder(mf.name, v, mf)
+        case _ =>
+      }
+    }
+    
+    def findPos(in: AnyRef) : Can[Int] = {
+      tArray.toList.zipWithIndex.filter(mft => in eq mft._1.field) match {
+        case Nil => Empty
+        case x :: xs => Full(x._2)
+      }
+    }
+    
+ 
+    val resArray = new ListBuffer[FieldHolder[BaseRecord]];
+    
+    fieldOrder.foreach(f => findPos(f).foreach(pos => resArray += tArray.remove(pos)))
+    
+    tArray.foreach(mft => resArray += mft)      
+    
+    fieldList = resArray.toList
+  }
+
   def mutable_? = true
-      
-  def createWithMutableField[FieldType](original: BaseRecord, field: Field[FieldType, BaseRecord], newValue: FieldType): BaseRecord = null.asInstanceOf[BaseRecord] // FIXME
+  
+  /**
+   * Creates a mew record
+   */
+  def createRecord: BaseRecord = {
+    val rec: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
+    rec.runSafe {
+    
+      for (v <- rec.getClass.getMethods if isMagicObject(v) && isMappedField(v)) {
+        v.invoke(rec, null) match {
+          case mf: Field[_, BaseRecord] if !mf.ignoreField_? =>
+            mf.owner = rec;
+            mf.setName_!(v.getName)
+          case _ =>
+        }
+      }
+    }
+    rec
+  }
+  
+  def createWithMutableField[FieldType](original: BaseRecord, 
+                                        field: Field[FieldType, BaseRecord], 
+                                        newValue: FieldType): BaseRecord = {
+    val rec = createRecord
+  
+    for (f <- fieldList) {
+      (f.name == field.name) match {
+        case true => rec.fieldByName(f.name) match {
+          case Full(fld) => fld.setFromAny(newValue) 
+          case _ =>
+        }
+        case false => rec.fieldByName(f.name) match {
+          case Full(field) => field.setFromAny(original.fieldByName(f.name) match {
+            case Full(origField) => origField.value 
+            case _ =>
+          }) 
+          case _ =>
+        }
+
+      }
+    }
+    
+    rec
+  }
   
   def asHtml(inst: BaseRecord): NodeSeq = NodeSeq.Empty
   
@@ -40,56 +124,9 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
     Can(fieldList.find(f => f.name == fieldName)).map(holder => ??(holder.method, inst).asInstanceOf[Field[T, BaseRecord]])
   }
   
-  private[record] var fieldList: List[FieldHolder[BaseRecord]] = Nil;
-  
-  private var lifecycleCallbacks: List[(String, Method)] = Nil
-
   def fieldOrder: List[Field[_, BaseRecord]] = Nil
    
-  this.runSafe {
-    val tArray = new ListBuffer[FieldHolder[BaseRecord]]
-    
-    def isMagicObject(m: Method) = m.getReturnType.getName.endsWith("$"+m.getName+"$") && m.getParameterTypes.length == 0
-    def isMappedField(m: Method) = classOf[Field[Nothing, BaseRecord]].isAssignableFrom(m.getReturnType)
-    def isLifecycle(m: Method) = classOf[LifecycleCallbacks].isAssignableFrom(m.getReturnType)
-    
-    lifecycleCallbacks = for (v <- this.getClass.getSuperclass.getMethods.toList if isMagicObject(v) && isLifecycle(v)) yield (v.getName, v)
-    
-    for (v <- this.getClass.getSuperclass.getMethods  if isMagicObject(v) && isMappedField(v)) {
-      v.invoke(this, null) match {
-        case mf: Field[_, BaseRecord] if !mf.ignoreField_? =>
-          mf.owner = this;
-          mf.setName_!(v.getName)
-          tArray += FieldHolder(mf.name, v, mf)
-        case _ =>
-      }
-    }
-    
-    def findPos(in: AnyRef) : Can[Int] = {
-      tArray.toList.zipWithIndex.filter(mft => in eq mft._1.field) match {
-        case Nil => Empty
-        case x :: xs => Full(x._2)
-      }
-    }
-    
-    val resArray = new ListBuffer[FieldHolder[BaseRecord]];
-    
-    fieldOrder.foreach(f => findPos(f).foreach(pos => resArray += tArray.remove(pos)))
-    
-    tArray.foreach(mft => resArray += mft)      
-    
-    fieldList = resArray.toList
-  }
 
-  private def eachField(what: BaseRecord, toRun: List[(BaseRecord) => Any])(f: (LifecycleCallbacks) => Any) {
-    lifecycleCallbacks.foreach (e =>
-      e._2.invoke(what, null) match {
-        case lccb: LifecycleCallbacks => f(lccb)
-        case _ =>
-      })
-    toRun.foreach{tf => tf(what)}
-  }
-  
   def beforeValidation: List[BaseRecord => Any] = Nil
   def beforeValidationOnCreate: List[BaseRecord => Any] = Nil
   def beforeValidationOnUpdate: List[BaseRecord => Any] = Nil

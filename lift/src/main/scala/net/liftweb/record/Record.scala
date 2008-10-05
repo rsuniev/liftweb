@@ -41,7 +41,6 @@ trait Record[MyType <: Record[MyType]] {
     Safe.safe_?(secure_#)
   }
   
-  
   def runSafe[T](f : => T) : T = {
     Safe.runSafe(secure_#)(f)
   }

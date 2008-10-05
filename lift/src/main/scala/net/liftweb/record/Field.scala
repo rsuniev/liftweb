@@ -119,7 +119,7 @@ trait SimpleField extends FieldLocator {
   
   def setFromAny(in: Any): Unit
   
-  def value: SMyType = synchronized{
+  def value: SMyType = synchronized {
     if (needsDefault) {data = defaultValue ; needsDefault = false} 
 
     if (canRead_?) data
