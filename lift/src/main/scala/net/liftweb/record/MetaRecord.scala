@@ -25,19 +25,27 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   private def isMappedField(m: Method) = classOf[Field[Nothing, BaseRecord]].isAssignableFrom(m.getReturnType)
   private def isLifecycle(m: Method) = classOf[LifecycleCallbacks].isAssignableFrom(m.getReturnType)
 
+  def introspect(rec: BaseRecord, methods: Array[Method])(f: (Method, Field[_, BaseRecord]) => Any) = {
+    for (v <- methods  if isMagicObject(v) && isMappedField(v)) {
+      v.invoke(rec, null) match {
+        case mf: Field[_, BaseRecord] if !mf.ignoreField_? =>
+          f(v, mf)
+        case _ =>
+      }
+    }
+    
+  }
+  
   this.runSafe {
     val tArray = new ListBuffer[FieldHolder[BaseRecord]]
     
     lifecycleCallbacks = for (v <- this.getClass.getSuperclass.getMethods.toList if isMagicObject(v) && isLifecycle(v)) yield (v.getName, v)
     
-    for (v <- this.getClass.getSuperclass.getMethods  if isMagicObject(v) && isMappedField(v)) {
-      v.invoke(this, null) match {
-        case mf: Field[_, BaseRecord] if !mf.ignoreField_? =>
-          mf.owner = this;
-          mf.setName_!(v.getName)
-          tArray += FieldHolder(mf.name, v, mf)
-        case _ =>
-      }
+    introspect(this, this.getClass.getSuperclass.getMethods) {
+      case (v, mf) =>
+        mf.owner = MetaRecord.this;
+        mf.setName_!(v.getName)
+        tArray += FieldHolder(mf.name, v, mf)
     }
     
     def findPos(in: AnyRef) : Can[Int] = {
@@ -65,15 +73,11 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   def createRecord: BaseRecord = {
     val rec: BaseRecord = rootClass.newInstance.asInstanceOf[BaseRecord]
     rec.runSafe {
-    
-      for (v <- rec.getClass.getMethods if isMagicObject(v) && isMappedField(v)) {
-        v.invoke(rec, null) match {
-          case mf: Field[_, BaseRecord] if !mf.ignoreField_? =>
-            mf.owner = rec;
-            mf.setName_!(v.getName)
-          case _ =>
+      introspect(rec, rec.getClass.getMethods) {
+        case (v, mf) =>
+          mf.owner = rec;
+          mf.setName_!(v.getName)
         }
-      }
     }
     rec
   }
