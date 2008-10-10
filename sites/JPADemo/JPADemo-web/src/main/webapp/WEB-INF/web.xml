@@ -10,6 +10,17 @@ PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
   <display-name>Lift Filter</display-name>
   <description>The Filter that intercepts lift calls</description>
   <filter-class>net.liftweb.http.LiftFilter</filter-class>
+  <persistence-context-ref>
+    <description>
+      Persistence context for the library app
+    </description>
+    <persistence-context-ref-name>
+      jpaweb
+    </persistence-context-ref-name>
+    <persistence-unit-name>
+      jpaweb
+    </persistence-unit-name>
+  </persistence-context-ref>
 </filter>
   	
 
