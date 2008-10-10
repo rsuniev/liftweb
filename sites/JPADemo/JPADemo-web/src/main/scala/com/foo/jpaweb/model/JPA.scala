@@ -46,6 +46,9 @@ abstract class ScalaEntityManager(val persistanceName: String) {
     q
   }
 
+  // Common enough to combine into one op
+  def mergeAndFlush[T](entity : T) : T = {val e = merge(entity); flush(); e}
+
   // methods defined on Entity Manager
   def persist(entity: AnyRef) = em.persist(entity)
   def merge[T](entity: T): T = em.merge(entity)

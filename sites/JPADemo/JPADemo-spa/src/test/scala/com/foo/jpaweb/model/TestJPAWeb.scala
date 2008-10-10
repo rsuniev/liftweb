@@ -13,7 +13,7 @@ class TestJPAWeb {
   @Before
   def initEMF () = {
     try {
-      emf = Persistence.createEntityManagerFactory("jpaweb")
+      emf = Persistence.createEntityManagerFactory("jpaweb-dev")
     } catch {
       case e: Exception => {
 	def printAndDescend(ex : Throwable) : Unit = {

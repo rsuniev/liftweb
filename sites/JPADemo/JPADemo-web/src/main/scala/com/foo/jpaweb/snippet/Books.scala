@@ -28,7 +28,7 @@ class BookOps {
 	   "published" -> Text(formatter.format(book.published)),
 	   "genre" -> Text(if (book.genre != null) book.genre.toString else ""),
 	   "author" -> Text(book.author.name),
-	   "edit" -> SHtml.link("add.html", () => bookVar(book), Text(?("Edit")))))
+	   "edit" -> SHtml.link("add", () => bookVar(book), Text(?("Edit")))))
   }
 
   // Set up a requestVar to track the book object for edits and adds
@@ -36,10 +36,12 @@ class BookOps {
   def book = bookVar.is
 
   def add (xhtml : NodeSeq) : NodeSeq = {
-    def doAdd () = {
-      Model.merge(book)
-      redirectTo("list.html")
-    }
+    def doAdd = Model.wrapEM({
+      Model.mergeAndFlush(book)
+      redirectTo("list")
+    }, {
+      case cv : ConstraintViolation => S.error("A book with that name already exists")
+    })
 
     // Hold a val here so that the "id" closure holds it when we re-enter this method
     val currentId = book.id

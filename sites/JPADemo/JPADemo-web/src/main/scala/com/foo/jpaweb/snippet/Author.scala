@@ -17,10 +17,10 @@ class AuthorOps {
     authors.flatMap(author =>
       bind("author", xhtml,
 	   "name" -> Text(author.name),
-	   "count" -> SHtml.link("/books/search.html", {() =>
+	   "count" -> SHtml.link("/books/search", {() =>
 	     BookOps.resultVar(Model.createNamedQuery[Book]("findBooksByAuthor", "id" ->author.id).getResultList().toList)
 	     }, Text(author.books.size().toString)),
-	   "edit" -> SHtml.link("add.html", () => authorVar(author), Text(?("Edit")))))
+	   "edit" -> SHtml.link("add", () => authorVar(author), Text(?("Edit")))))
   }
 
   // Set up a requestVar to track the author object for edits and adds
@@ -28,14 +28,16 @@ class AuthorOps {
   def author = authorVar.is
 
   def add (xhtml : NodeSeq) : NodeSeq = {
-    def doAdd () = {
+    def doAdd = Model.wrapEM({
       if (author.name.length == 0) {
 	error("emptyAuthor", "The author's name cannot be blank")
       } else {
-	Model.merge(author)
-	redirectTo("list.html")
+	Model.mergeAndFlush(author)
+	redirectTo("list")
       }
-    }
+    }, {
+      case cv : ConstraintViolation => S.error("An Author with that name already exists")
+    })
 
     // Hold a val here so that the "id" closure holds it when we re-enter this method
     val currentId = author.id

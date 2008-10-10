@@ -1,0 +1,8 @@
+Some things to note:
+
+1. Even though this is using JTA, it's not container-managed
+transactions. That means that we handle commits ourselves.
+2. Normally, the EM won't send data to the database until the
+transaction commits (auto-flush). If you want to force something to go
+immediately (so that constraints are checked, etc) you need to make
+sure to use either Model.flush or Model.mergeAndFlush to trigger the update.

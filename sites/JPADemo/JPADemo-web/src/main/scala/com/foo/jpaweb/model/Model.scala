@@ -3,27 +3,61 @@ package com.foo.jpaweb.model
 import javax.persistence._
 
 import java.sql.SQLException
+import javax.naming.InitialContext
+import javax.transaction.{Status,UserTransaction}
+
 import org.hibernate.HibernateException
+import org.hibernate.exception.ConstraintViolationException
 
 import net.liftweb.util.Log
 
+class ConstraintViolation(message : String) extends Exception(message)
+
 object Model extends ScalaEntityManager("jpaweb") {
-  lazy val factory = Persistence.createEntityManagerFactory(persistanceName)
-    
+  //lazy val factory = Persistence.createEntityManagerFactory(persistanceName)
+  lazy val ctxt = new InitialContext()
+  lazy val factory = ctxt.lookup("java:comp/env/" + persistanceName).asInstanceOf[EntityManagerFactory]
+
+  def tx = ctxt.lookup("java:comp/UserTransaction").asInstanceOf[UserTransaction]
+
+  val txStatus = Map(Status.STATUS_ACTIVE -> "ACTIVE",
+		     Status.STATUS_COMMITTED -> "COMMITTED",
+		     Status.STATUS_COMMITTING -> "COMMITTING",
+		     Status.STATUS_MARKED_ROLLBACK -> "MARKED_ROLLBACK",
+		     Status.STATUS_NO_TRANSACTION -> "NO_TRANSACTION",
+		     Status.STATUS_PREPARED -> "PREPARED",
+		     Status.STATUS_PREPARING -> "PREPARING",
+		     Status.STATUS_ROLLING_BACK -> "ROLLING_BACK",
+		     Status.STATUS_ROLLEDBACK -> "ROLLEDBACK",
+		     Status.STATUS_UNKNOWN -> "UNKNOWN")
+
   override def openEM () = {
+    //val tx = txObj
+    Log.debug("Got transaction: " + tx)
+    tx.begin()
+
     val em = factory.createEntityManager()
-    em.getTransaction().begin()
+
+    Log.debug("TX status = " + txStatus(tx.getStatus()))
+
     em
   }
 
   override def closeEM (em : EntityManager) = {
-    if (em.getTransaction().getRollbackOnly()) {
-      em.getTransaction().rollback()
-    } else {
-      em.getTransaction().commit()
-    }
-
     em.close()
+
+    /* We only want to commit if we haven't already thrown an exception (due to a constraint violation, etc)
+     */
+    try {
+      if (tx.getStatus() == Status.STATUS_MARKED_ROLLBACK) {
+	tx.rollback()
+      } else if (tx.getStatus() == Status.STATUS_ACTIVE) {
+	tx.commit()
+	Log.debug("Committed TX")
+      } else {
+	Log.debug("TX status = " + txStatus(tx.getStatus()))
+      }
+    }
   }
 
   /**
@@ -45,9 +79,6 @@ object Model extends ScalaEntityManager("jpaweb") {
   def wrapEM(f : => Unit) : Unit = wrapEM(f, { case _ => /* nop */ })
   def wrapEM[A](f : => A, handler : PartialFunction[Throwable, A]) : A = {
     try {
-      val tx = getEM.getTransaction()
-
-      if (! tx.isActive() ) { tx.begin() }
       try {
 	val ret : A = f
 	ret
@@ -58,18 +89,14 @@ object Model extends ScalaEntityManager("jpaweb") {
 	}
 	case pe : PersistenceException => {
 	  Log.error("EM Error", pe)
-	  handler(pe)
+	  pe.getCause() match {
+	    case cve : ConstraintViolationException => handler(new ConstraintViolation(cve.getMessage()))
+	    case _ => handler(pe)
+	  }
 	}
 	case sqle : java.sql.SQLException => {
 	  Log.error("SQL Exception", sqle)
 	  handler(sqle)
-	}
-      } finally {
-	// make sure that we commit even with a redirectexception
-	if (tx.isActive() && ! tx.getRollbackOnly()) {
-	  tx.commit()
-	} else if (tx.getRollbackOnly()) {
-	  tx.rollback()
 	}
       }
     } catch {
