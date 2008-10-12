@@ -56,7 +56,7 @@ trait SimpleField extends FieldLocator {
   def asString = displayName + "=" + data
 
   /**
-   * Convert the fieldset value to an XHTML representation
+   * Convert the field value to an XHTML representation
    */
   def toXHtml = Text(toString)
 
