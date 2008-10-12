@@ -1,3 +1,16 @@
+/*
+ * Copyright 2007-2008 WorldWide Conferencing, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.liftweb.record
 
 import net.liftweb._
@@ -40,7 +53,8 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   this.runSafe {
     val tArray = new ListBuffer[FieldHolder[BaseRecord]]
 
-    lifecycleCallbacks = for (v <- this.getClass.getSuperclass.getMethods.toList if isMagicObject(v) && isLifecycle(v)) yield (v.getName, v)
+    lifecycleCallbacks = for (v <- this.getClass.getSuperclass.getMethods.toList
+                              if isMagicObject(v) && isLifecycle(v)) yield (v.getName, v)
 
     introspect(this, this.getClass.getSuperclass.getMethods) {
       case (v, mf) => tArray += FieldHolder(mf.name, v, mf)
@@ -102,7 +116,9 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
 
   def asHtml(inst: BaseRecord): NodeSeq = NodeSeq.Empty
 
-  def validate(toValidate: BaseRecord): List[FieldError] = Nil // TODO - implement this  
+  def validate(inst: BaseRecord): List[FieldError] = {
+    fieldList.flatMap(holder => inst.fieldByName(holder.name).open_!.validationErrors)
+  }
 
   def asJs(inst: BaseRecord): JsExp = JE.JsObj(("$lift_class", JE.Str("temp"))) // TODO - implement this
 
@@ -123,7 +139,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
 
   def fieldOrder: List[Field[_, BaseRecord]] = Nil
 
-  case class FieldHolder[T](name: String, method: Method, field: Field[_, T]) 
+  case class FieldHolder[T](name: String, method: Method, field: Field[_, T])
 }
 
 trait LifecycleCallbacks {

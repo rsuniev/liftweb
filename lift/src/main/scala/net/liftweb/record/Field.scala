@@ -1,42 +1,25 @@
+/*
+ * Copyright 2007-2008 WorldWide Conferencing, LLC
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://www.apache.org/licenses/LICENSE-2.0
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package net.liftweb.record
 
 import net.liftweb.util._
+import net.liftweb.http.{S, FieldIdentifier, FieldError}
 import scala.xml._
 
-trait FieldHandler
-
-trait FieldHandlerRequest[RetType <: FieldHandler]
-
-object JdbcHandler extends JdbcFieldHandler
-class JdbcFieldHandler extends FieldHandler
-object XmlHandler extends XmlHandlerClass
-class XmlHandlerClass extends FieldHandler
-object JdbcRequest extends FieldHandlerRequest[JdbcFieldHandler]
-object XmlRequest extends FieldHandlerRequest[XmlHandlerClass]
-
-trait FieldLocator { self: SimpleField =>
-  def locateFieldHandler[T <: FieldHandler](request: FieldHandlerRequest[T]): Can[T] = Empty
-}
-
-trait JdbcLocator extends FieldLocator { self: SimpleField =>
-override def locateFieldHandler[T <: FieldHandler](request: FieldHandlerRequest[T]): Can[T] = 
-  request match {
-    case JdbcRequest => Full(JdbcHandler)
-    case _ => super.locateFieldHandler(request)
-  }
-}
-
-trait XmlLocator extends FieldLocator { self: SimpleField =>
-override def locateFieldHandler[T <: FieldHandler](request: FieldHandlerRequest[T]): Can[T] = 
-  request match {
-    case XmlRequest => Full(XmlHandler)
-    case _ => super.locateFieldHandler(request)
-  }
-}
-
 /**
- * A simple field that can store and retreive a value of a given type
- */
+  * A simple field that can store and retreive a value of a given type
+  */
 trait SimpleField extends FieldLocator {
   type SMyType
   type SOwnerType <: Record[SOwnerType]
@@ -44,8 +27,8 @@ trait SimpleField extends FieldLocator {
   private[record] var data: SMyType = _
   private[record] var needsDefault = true
   private[record] var obscured: SMyType = _
-
   private[record] var fieldName: String = _
+  private[record] var errors : List[FieldError] = Nil
 
   /**
    * Return the owner of this field
@@ -73,7 +56,7 @@ trait SimpleField extends FieldLocator {
   def asString = displayName + "=" + data
 
   /**
-   * Convert the field value to an XHTML representation
+   * Convert the fieldset value to an XHTML representation
    */
   def toXHtml = Text(toString)
 
@@ -93,22 +76,24 @@ trait SimpleField extends FieldLocator {
    */
   def checkCanRead_? = true
 
-  def fromString(in: String): Can[SMyType]
-
   def canWrite_? = owner.safe_? || checkCanWrite_?
 
   def checkCanWrite_? = true
 
   def obscure(in: SMyType): SMyType = obscured
 
-  def set(in: SMyType): Unit = synchronized {
+  def set(in: SMyType): SMyType = synchronized {
     if (checkCanWrite_?) {
-      data = in 
-      needsDefault = false
+      errors = validators.flatMap(f => f(in))
+      if (valid_?) {
+        data = in
+        needsDefault = false
+      }
     }
+    data
   }
 
-  def setFromAny(in: Any): Unit
+  def setFromAny(in: Any): SMyType
 
   def value: SMyType = synchronized {
     if (needsDefault) {data = defaultValue ; needsDefault = false} 
@@ -136,9 +121,17 @@ trait SimpleField extends FieldLocator {
     if(safe_?) fieldName = newName
     fieldName
   }
+
+  def valid_? = errors == Nil
+
+  def clearMessages = errors = Nil
+
+  def validationErrors = errors
+
+  def validators : List[SMyType => List[FieldError]] = Nil
 }
 
-trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField {
+trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField with FieldIdentifier {
   type SMyType = MyType
   type SOwnerType = OwnerType
 
@@ -151,11 +144,41 @@ trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField {
 
 }
 
+trait JDBCField[MyType, OwnerType <: Record[OwnerType]] extends Field[MyType, OwnerType]{
+   def jdbcFriendly(field : String) : MyType
+}
+
 trait KeyField[MyType, OwnerType <: Record[OwnerType] with KeyedRecord[OwnerType, MyType]] extends Field[MyType, OwnerType] {
   def ===(other: KeyField[MyType, OwnerType]): Boolean = this.value == other.value
 }
 
-abstract class LongFieldProto[OwnerType <: Record[OwnerType]] extends Field[Long, OwnerType] with JdbcLocator with XmlLocator {
-  def defaultValue = 0
-  def fromString(in: String) = Full(Helpers.toLong(in))
+trait FieldHandler
+
+trait FieldHandlerRequest[RetType <: FieldHandler]
+
+object JdbcHandler extends JdbcFieldHandler
+class JdbcFieldHandler extends FieldHandler
+object XmlHandler extends XmlHandlerClass
+class XmlHandlerClass extends FieldHandler
+object JdbcRequest extends FieldHandlerRequest[JdbcFieldHandler]
+object XmlRequest extends FieldHandlerRequest[XmlHandlerClass]
+
+trait FieldLocator { self: SimpleField =>
+  def locateFieldHandler[T <: FieldHandler](request: FieldHandlerRequest[T]): Can[T] = Empty
+}
+
+trait JdbcLocator extends FieldLocator { self: SimpleField =>
+override def locateFieldHandler[T <: FieldHandler](request: FieldHandlerRequest[T]): Can[T] =
+  request match {
+    case JdbcRequest => Full(JdbcHandler)
+    case _ => super.locateFieldHandler(request)
+  }
+}
+
+trait XmlLocator extends FieldLocator { self: SimpleField =>
+override def locateFieldHandler[T <: FieldHandler](request: FieldHandlerRequest[T]): Can[T] =
+  request match {
+    case XmlRequest => Full(XmlHandler)
+    case _ => super.locateFieldHandler(request)
+  }
 }
