@@ -28,7 +28,7 @@ trait SimpleField extends FieldLocator {
   private[record] var needsDefault = true
   private[record] var obscured: SMyType = _
   private[record] var fieldName: String = _
-  private[record] var errors : List[FieldError] = Nil
+  private[record] var valueCouldNotBeSet = false
 
   /**
    * Return the owner of this field
@@ -84,19 +84,22 @@ trait SimpleField extends FieldLocator {
 
   def set(in: SMyType): SMyType = synchronized {
     if (checkCanWrite_?) {
-      errors = validators.flatMap(f => f(in))
-      if (valid_?) {
         data = in
+        valueCouldNotBeSet = false
         needsDefault = false
-      }
     }
     data
   }
 
-  def setFromAny(in: Any): SMyType
+  def setFromAny(in: Any): Can[SMyType]
+
+  def setFromString(s: String) : Can[SMyType]
 
   def value: SMyType = synchronized {
-    if (needsDefault) {data = defaultValue ; needsDefault = false} 
+    if (needsDefault) {
+      data = defaultValue;
+      needsDefault = false
+    }
 
     if (canRead_?) data
     else obscure(data)
@@ -118,17 +121,13 @@ trait SimpleField extends FieldLocator {
    * Set the name of this field
    */
   private[record] final def setName_!(newName : String) : String = {
-    if(safe_?) fieldName = newName
+    if (safe_?) fieldName = newName
     fieldName
   }
 
-  def valid_? = errors == Nil
+  def errorMessage : String = ""
 
-  def clearMessages = errors = Nil
-
-  def validationErrors = errors
-
-  def validators : List[SMyType => List[FieldError]] = Nil
+  def validators : List[SMyType => List[Node]] = Nil
 }
 
 trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField with FieldIdentifier {

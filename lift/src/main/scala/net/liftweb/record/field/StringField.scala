@@ -26,29 +26,31 @@ abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLe
   def this(rec: OwnerType, maxLength: Int, value: String) = {
     this(rec, maxLength)
     set(value)
-  } 
+  }
 
   def this(rec: OwnerType, value: String) = {
     this(rec, -1)
     set(value)
-  } 
+  }
 
   def owner = rec
 
-  override def setFromAny(in: Any): String = {
+  override def setFromAny(in: Any): Can[String] = {
     in match {
       case seq: Seq[_] if !seq.isEmpty => seq.map(setFromAny)(0)
-      case (s: String) :: _ => this.set(s)
-      case null => this.set(null)
-      case s: String => this.set(s)
-      case Some(s: String) => this.set(s)
-      case Full(s: String) => this.set(s)
-      case None | Empty | Failure(_, _, _) => this.set(null)
-      case o => this.set(o.toString)
+      case (s: String) :: _ => Full(this.set(s))
+      case null => Full(this.set(null))
+      case s: String => Full(this.set(s))
+      case Some(s: String) => Full(this.set(s))
+      case Full(s: String) => Full(this.set(s))
+      case None | Empty | Failure(_, _, _) => Full(this.set(null))
+      case o => Full(this.set(o.toString))
     }
   }
 
-  override def toForm = <input type="text" maxlength={maxLength.toString} 
+  def setFromString(s: String) : Can[SMyType] = Full(s)
+
+  override def toForm = <input type="text" maxlength={maxLength.toString}
 	 name={S.mapFunc(SFuncHolder(this.setFromAny(_)))} value={value match {case null => "" case s => s.toString}}/>
 
   override def defaultValue = ""

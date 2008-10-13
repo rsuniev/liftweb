@@ -71,7 +71,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
 
     fieldOrder.foreach(f => findPos(f).foreach(pos => resArray += tArray.remove(pos)))
 
-    tArray.foreach(mft => resArray += mft)      
+    tArray.foreach(mft => resArray += mft)
 
     fieldList = resArray.toList
   }
@@ -97,16 +97,16 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
    * @param - field the new mutated field
    * @param - the new value of the field
    */
-  def createWithMutableField[FieldType](original: BaseRecord, 
-                                        field: Field[FieldType, BaseRecord], 
+  def createWithMutableField[FieldType](original: BaseRecord,
+                                        field: Field[FieldType, BaseRecord],
                                         newValue: FieldType): BaseRecord = {
     val rec = createRecord
 
     for (f <- fieldList) {
       (f.name == field.name) match {
         case true => rec.fieldByName(f.name).map((recField: Field[_, _]) => recField.setFromAny(newValue) )
-        case _ => rec.fieldByName(f.name).map((recField: Field[_, _]) => 
-          original.fieldByName(f.name).map((m: Field[_, _]) => recField.setFromAny(m.value)) 
+        case _ => rec.fieldByName(f.name).map((recField: Field[_, _]) =>
+          original.fieldByName(f.name).map((m: Field[_, _]) => recField.setFromAny(m.value))
         )
       }
     }
@@ -117,7 +117,15 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   def asHtml(inst: BaseRecord): NodeSeq = NodeSeq.Empty
 
   def validate(inst: BaseRecord): List[FieldError] = {
-    fieldList.flatMap(holder => inst.fieldByName(holder.name).open_!.validationErrors)
+    fieldList.flatMap(holder => inst.fieldByName(holder.name) match {
+      case Full(field) => if (!field.valueCouldNotBeSet) {
+        field.validators.flatMap(f => f(field.value).map(msg => FieldError(field, msg)))
+      } else {
+        FieldError(field, Text(field.errorMessage)) :: Nil
+      }
+
+      case _ => Nil
+    })
   }
 
   def asJs(inst: BaseRecord): JsExp = JE.JsObj(("$lift_class", JE.Str("temp"))) // TODO - implement this

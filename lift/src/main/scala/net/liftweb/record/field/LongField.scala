@@ -19,32 +19,35 @@ import Helpers._
 import net.liftweb.http.{S, FieldError}
 import S._
 
-class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Long, OwnerType] {
+class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericField[Long, OwnerType] {
 
   override def owner = rec
 
   /**
    * Sets the field value from an Any
    */
-  override def setFromAny(in: Any): Long = {
+  override def setFromAny(in: Any): Can[Long] = {
     in match {
-      case n: Int => this.set(n)
-      case n: Number => this.set(n.longValue)
-      case (n: Number) :: _ => this.set(n.longValue)
-      case Some(n: Number) => this.set(n.longValue)
-      case Full(n: Number) => this.set(n.longValue)
-      case None | Empty | Failure(_, _, _) => this.set(0)
-      case (s: String) :: _ => this.set(toLong(s))
-      case null => this.set(0)
-      case s: String => this.set(toLong(s))
-      case o => this.set(toLong(o))
+      case n: Int => Full(this.set(n))
+      case n: Number => Full(this.set(n.longValue))
+      case (n: Number) :: _ => Full(this.set(n.longValue))
+      case Some(n: Number) => Full(this.set(n.longValue))
+      case Full(n: Number) => Full(this.set(n.longValue))
+      case None | Empty | Failure(_, _, _) => Full(this.set(0))
+      case (s: String) :: _ => setFromString(s)
+      case null => Full(this.set(0))
+      case s: String => setFromString(s)
+      case o => setFromString(o.toString)
     }
   }
 
-  /**
-   * Returns form input of this field
-   */
-  override def toForm = <input type="text" name={S.mapFunc{s: List[String] => this.setFromAny(s)}} value={value.toString}/>
+  override def setFromString(s: String) : Can[Long] = {
+    try{
+      Full(set(java.lang.Long.parseLong(s)));
+    } catch {
+      case e: Exception => valueCouldNotBeSet = true; Empty
+    }
+  }
 
   override def defaultValue = 0L
 

@@ -81,8 +81,8 @@ trait Record[MyType <: Record[MyType]] {
    * @param fieldName -- the name of the field to find
    *
    * @return Can[MappedField]
-   */ 
-  def fieldByName[T](fieldName: String): Can[Field[T, MyType]] = meta.fieldByName[T](fieldName, this)  
+   */
+  def fieldByName[T](fieldName: String): Can[Field[T, MyType]] = meta.fieldByName[T](fieldName, this)
 }
 
 trait ExpandoRecord[MyType <: Record[MyType] with ExpandoRecord[MyType]] {

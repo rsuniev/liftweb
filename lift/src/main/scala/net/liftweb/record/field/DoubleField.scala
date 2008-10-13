@@ -19,7 +19,7 @@ import Helpers._
 import net.liftweb.http.{S}
 import S._
 
-class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Double, OwnerType] {
+class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericField[Double, OwnerType] {
 
   override def owner = rec
 
@@ -41,25 +41,27 @@ class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[
   /**
    * Sets the field value from an Any
    */
-  override def setFromAny(in: Any): Double = {
+  override def setFromAny(in: Any): Can[Double] = {
     in match {
-      case n: Double => this.set(n)
-      case n: Number => this.set(n.doubleValue)
-      case (n: Number) :: _ => this.set(n.doubleValue)
-      case Some(n: Number) => this.set(n.doubleValue)
-      case None => this.set(0.0)
-      case (s: String) :: _ => this.set(toDouble(s))
-      case null => this.set(0L)
-      case s: String => this.set(toDouble(s))
-      case o => this.set(toDouble(o))
+      case n: Double => Full(this.set(n))
+      case n: Number => Full(this.set(n.doubleValue))
+      case (n: Number) :: _ => Full(this.set(n.doubleValue))
+      case Some(n: Number) => Full(this.set(n.doubleValue))
+      case None => Full(this.set(0.0))
+      case (s: String) :: _ => setFromString(s)
+      case null => Full(this.set(0L))
+      case s: String => setFromString(s)
+      case o => setFromString(o.toString)
     }
   }
 
-  /**
-   * Returns form input of this field
-   */
-  override def toForm = <input type="text" name={S.mapFunc({s: List[String] => this.setFromAny(s)})}
-	 value={value.toString}/>
+  override def setFromString(s: String) : Can[Double] = {
+    try{
+      Full(set(java.lang.Double.parseDouble(s)));
+    } catch {
+      case e: Exception => Empty
+    }
+  }
 
   override def defaultValue = 0.0
 
