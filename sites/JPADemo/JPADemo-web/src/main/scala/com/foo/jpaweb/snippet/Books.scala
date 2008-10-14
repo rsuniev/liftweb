@@ -37,21 +37,22 @@ class BookOps {
 
   def add (xhtml : NodeSeq) : NodeSeq = {
     def doAdd = Model.wrapEM({
-      Model.mergeAndFlush(book)
+      Model.flush()
       redirectTo("list")
     }, {
       case cv : ConstraintViolation => S.error("A book with that name already exists")
+      case _ => S.error("Internal error")
     })
 
-    // Hold a val here so that the "id" closure holds it when we re-enter this method
-    val currentId = book.id
+    // Hold a val here so that the "id" closure re-injects the book when we re-enter this method
+    val heldBook = book
 
     val authors = Model.createNamedQuery[Author]("findAllAuthors").getResultList()
     val choices = authors.map(author => (author.id.toString -> author.name)).toList
-    val default = if (book.author != null) { Full(book.author.id.toString) } else { Empty }
+    val default = Can.legacyNullTest(book.author).map(_.id.toString)
 
     bind("book", xhtml,
-	 "id" -> SHtml.hidden({book.id = currentId}),
+	 "id" -> SHtml.hidden({bookVar(Model.merge(heldBook))}),
 	 "title" -> SHtml.text(book.title, book.title = _),
 	 "published" -> SHtml.text(formatter.format(book.published), {id : String => book.published = formatter.parse(id)}) % ("id" -> "published"),
 	 "genre" -> SHtml.select(Genre.getNameDescriptionList, (Can.legacyNullTest(book.genre).map(_.toString) or Full("")), choice => book.genre = Genre.valueOf(choice)),

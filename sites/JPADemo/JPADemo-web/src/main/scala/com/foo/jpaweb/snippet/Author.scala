@@ -3,7 +3,7 @@ package com.foo.jpaweb.snippet
 import scala.xml.{NodeSeq,Text}
 
 import net.liftweb.http.{RequestVar,S,SHtml}
-import net.liftweb.util.Helpers
+import net.liftweb.util.{Helpers,Log}
 import S._
 import Helpers._
 
@@ -32,18 +32,19 @@ class AuthorOps {
       if (author.name.length == 0) {
 	error("emptyAuthor", "The author's name cannot be blank")
       } else {
-	Model.mergeAndFlush(author)
+	Model.flush()
 	redirectTo("list")
       }
     }, {
       case cv : ConstraintViolation => S.error("An Author with that name already exists")
+      case _ => S.error("Internal error")
     })
 
-    // Hold a val here so that the "id" closure holds it when we re-enter this method
-    val currentId = author.id
+    // Hold a val here so that the "id" closure re-injects it when we re-enter this method
+    val heldAuthor = author
 
     bind("author", xhtml,
-	 "id" -> SHtml.hidden({author.id = currentId}),
+	 "id" -> SHtml.hidden({authorVar(Model.merge(heldAuthor))}),
 	 "name" -> SHtml.text(author.name, author.name = _),
 	 "submit" -> SHtml.submit(?("Save"), doAdd))
   }

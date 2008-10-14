@@ -84,18 +84,21 @@ object Model extends ScalaEntityManager("jpaweb") {
 	ret
       } catch {
 	case he : HibernateException => {
-	  Log.error("Hibernate error", he)
+	  Log.error("Hibernate error: " + he.getMessage)
+	  Log.debug(he)
 	  handler(he)
 	}
 	case pe : PersistenceException => {
-	  Log.error("EM Error", pe)
+	  Log.error("EM Error: " + pe.getMessage)
+	  Log.debug(pe)
 	  pe.getCause() match {
 	    case cve : ConstraintViolationException => handler(new ConstraintViolation(cve.getMessage()))
 	    case _ => handler(pe)
 	  }
 	}
 	case sqle : java.sql.SQLException => {
-	  Log.error("SQL Exception", sqle)
+	  Log.error("SQL Exception: " + sqle.getMessage)
+	  Log.debug(sqle)
 	  handler(sqle)
 	}
       }
