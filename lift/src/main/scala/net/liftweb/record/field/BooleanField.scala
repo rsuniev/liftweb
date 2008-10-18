@@ -59,7 +59,7 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
 
     uniqueFieldId match {
       case Full(id) =>
-        <div id={name+"_div_id"}><div><label for={id}>{displayName}</label></div>{el % ("id" -> id)}</div>
+        <div id={name+"_holder"}><div><label for={name}>{displayName}</label></div>{el % ("id" -> name)}<lift:msg id={id}/></div>
       case _ => <div>{el}</div>
     }
 
