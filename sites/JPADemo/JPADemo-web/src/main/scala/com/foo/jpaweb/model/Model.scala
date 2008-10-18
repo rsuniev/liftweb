@@ -14,9 +14,8 @@ import net.liftweb.util.Log
 class ConstraintViolation(message : String) extends Exception(message)
 
 object Model extends ScalaEntityManager("jpaweb") {
-  //lazy val factory = Persistence.createEntityManagerFactory(persistanceName)
   lazy val ctxt = new InitialContext()
-  lazy val factory = ctxt.lookup("java:comp/env/" + persistanceName).asInstanceOf[EntityManagerFactory]
+  //lazy val factory = ctxt.lookup("java:comp/env/" + persistanceName).asInstanceOf[EntityManagerFactory]
 
   def tx = ctxt.lookup("java:comp/UserTransaction").asInstanceOf[UserTransaction]
 
@@ -36,7 +35,7 @@ object Model extends ScalaEntityManager("jpaweb") {
     Log.debug("Got transaction: " + tx)
     tx.begin()
 
-    val em = factory.createEntityManager()
+    val em = ctxt.lookup("java:comp/env/persistence/" + persistanceName).asInstanceOf[EntityManager]
 
     Log.debug("TX status = " + txStatus(tx.getStatus()))
 

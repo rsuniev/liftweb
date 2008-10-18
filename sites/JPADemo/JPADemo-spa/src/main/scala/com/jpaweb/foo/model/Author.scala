@@ -14,6 +14,6 @@ class Author {
   @Column{val unique = true, val nullable = false}
   var name : String = ""
 
-  @OneToMany(){val mappedBy = "author", val targetEntity = classOf[Book]}
+  @OneToMany{val mappedBy = "author", val targetEntity = classOf[Book], val cascade = Array(CascadeType.REMOVE)}
   var books : java.util.Set[Book] = new java.util.HashSet[Book]()
 }
