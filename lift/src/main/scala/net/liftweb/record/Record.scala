@@ -45,6 +45,9 @@ trait Record[MyType <: Record[MyType]] {
     Safe.runSafe(secure_#)(f)
   }
 
+  /**
+   * Returns the HTML representation ofthis Record
+   */
   def asHtml: NodeSeq = {
     meta.asHtml(this)
   }
@@ -56,12 +59,22 @@ trait Record[MyType <: Record[MyType]] {
    */
   def suplementalJs(ob: Can[KeyObfuscator]): List[(String, JsExp)] = Nil
 
+  /**
+   * Validates this Record by calling validators for each field
+   *
+   * @return a List of FieldError. If this list is empty you can assume that record was validated successfully
+   */
   def validate : List[FieldError] = {
     runSafe {
       meta.validate(this)
     }
   }
 
+  /**
+   * Retuns the JavaScript expression for this Record
+   *
+   * @return a JsExp
+   */
   def asJs: JsExp = {
     meta.asJs(this)
   }

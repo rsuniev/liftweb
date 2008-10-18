@@ -76,6 +76,9 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
     fieldList = resArray.toList
   }
 
+  /**
+   * Specifies if this Record is mutable or not
+   */
   def mutable_? = true
 
   /**
@@ -92,7 +95,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   /**
    * Creates a new record setting the value of the fields from the original object but
    * apply the new value for the specific field
-   * 
+   *
    * @param - original the initial record
    * @param - field the new mutated field
    * @param - the new value of the field
@@ -114,8 +117,20 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
     rec
   }
 
+  /**
+   * Returns the HTML representation of inst Record.
+   *
+   * @param inst - th designated Record
+   * @return a NodeSeq
+   */
   def asHtml(inst: BaseRecord): NodeSeq = NodeSeq.Empty
 
+  /**
+   * Validates the inst Record by calling validators for each field
+   *
+   * @pram inst - the Record tobe validated
+   * @return a List of FieldError. If this list is empty you can assume that record was validated successfully
+   */
   def validate(inst: BaseRecord): List[FieldError] = {
     fieldList.flatMap(holder => inst.fieldByName(holder.name) match {
       case Full(field) => if (!field.valueCouldNotBeSet) {
@@ -128,9 +143,24 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
     })
   }
 
+  /**
+   * Retuns the JavaScript expression for inst Record
+   *
+   * @param inst - the designated Record
+   * @return a JsExp
+   */
   def asJs(inst: BaseRecord): JsExp = JE.JsObj(("$lift_class", JE.Str("temp"))) // TODO - implement this
 
-  def toForm(inst: BaseRecord): NodeSeq = <form></form> // TODO - implement this
+  /**
+   * Returns the XHTML representation of inst Record.
+   *
+   * @param inst - the record to be rendered
+   * @return the XHTML content as a NodeSeq
+   */
+  def toForm(inst: BaseRecord): NodeSeq =
+    fieldList.flatMap(holder =>
+      inst.fieldByName(holder.name).map((field:Field[_, BaseRecord]) =>
+        field.toForm).openOr(NodeSeq.Empty) ++ Text("\n"))
 
   private[record] def ??(meth: Method, inst: BaseRecord) = meth.invoke(inst, null).asInstanceOf[Field[_, BaseRecord]]
 
@@ -145,6 +175,11 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
     Can(fieldList.find(f => f.name == fieldName)).map(holder => ??(holder.method, inst).asInstanceOf[Field[T, BaseRecord]])
   }
 
+  /**
+   * Defined the order of the fields in this record
+   *
+   * @return a List of Field
+   */
   def fieldOrder: List[Field[_, BaseRecord]] = Nil
 
   case class FieldHolder[T](name: String, method: Method, field: Field[_, T])

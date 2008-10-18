@@ -17,6 +17,7 @@ import scala.xml._
 import net.liftweb.util._
 import net.liftweb.http.{S, FieldError}
 import S._
+import Helpers._
 
 /**
  * A Field containing String content.
@@ -25,11 +26,11 @@ abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLe
 
   def this(rec: OwnerType, maxLength: Int, value: String) = {
     this(rec, maxLength)
-    set(value)
+     set(value)
   }
 
   def this(rec: OwnerType, value: String) = {
-    this(rec, -1)
+    this(rec, 100)
     set(value)
   }
 
@@ -50,8 +51,18 @@ abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLe
 
   def setFromString(s: String) : Can[SMyType] = Full(s)
 
-  override def toForm = <input type="text" maxlength={maxLength.toString}
-	 name={S.mapFunc(SFuncHolder(this.setFromAny(_)))} value={value match {case null => "" case s => s.toString}}/>
+  override def toForm = {
+    var el = <input type="text" maxlength={maxLength.toString}
+      name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
+      value={value match {case null => "" case s => s.toString}}/>;
+
+    uniqueFieldId match {
+      case Full(id) =>
+        <div id={name+"_div_id"}><div><label for={id}>{displayName}</label></div>{el % ("id" -> id)}</div>
+      case _ => <div>{el}</div>
+    }
+
+  }
 
   override def defaultValue = ""
 
@@ -73,7 +84,7 @@ abstract class DBStringField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, m
   }
 
   def this(rec: OwnerType, value: String) = {
-    this(rec, -1)
+    this(rec, 100)
     set(value)
   }
 

@@ -141,6 +141,7 @@ trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField with Fie
     owner.meta.createWithMutableField(owner, this, in)
   }
 
+  override def uniqueFieldId: Can[String] = Full(name+"_id")
 }
 
 trait JDBCField[MyType, OwnerType <: Record[OwnerType]] extends Field[MyType, OwnerType]{
