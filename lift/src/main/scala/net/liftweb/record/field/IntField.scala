@@ -23,6 +23,11 @@ class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericFi
 
   override def owner = rec
 
+  def this(rec: OwnerType, value: Int) = {
+    this(rec)
+    set(value)
+  }
+
   /**
    * Sets the field value from an Any
    */
