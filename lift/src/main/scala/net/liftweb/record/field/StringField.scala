@@ -54,15 +54,29 @@ abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLe
   override def toForm = {
     var el = <input type="text" maxlength={maxLength.toString}
       name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
-      value={value match {case null => "" case s => s.toString}}/>;
+      value={value match {case null => "" case s => s.toString}}
+      tabindex={tabIndex toString}/>;
 
     uniqueFieldId match {
       case Full(id) =>
-        <div id={name+"_holder"}><div><label for={name}>{displayName}</label></div>{el % ("id" -> name)}<lift:msg id={id}/></div>
+        <div id={id+"_holder"}><div><label for={id+"_field"}>{displayName}</label></div>{el % ("id" -> (id+"_field"))}<lift:msg id={id}/></div>
       case _ => <div>{el}</div>
     }
 
   }
+
+  def asXHtml: NodeSeq = {
+    var el = <input type="text" maxlength={maxLength.toString}
+      name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
+      value={value match {case null => "" case s => s.toString}}
+      tabindex={tabIndex toString}/>;
+
+    uniqueFieldId match {
+      case Full(id) =>  el % ("id" -> (id+"_field"))
+      case _ => el
+    }
+  }
+
 
   override def defaultValue = ""
 

@@ -55,14 +55,27 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
   override def toForm = {
     var el = <input type="checkbox"
       name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
-      value={value.toString}/>;
+      value={value.toString}
+      tabindex={tabIndex toString}/>;
 
     uniqueFieldId match {
       case Full(id) =>
-        <div id={name+"_holder"}><div><label for={name}>{displayName}</label></div>{el % ("id" -> name)}<lift:msg id={id}/></div>
+        <div id={id+"_holder"}><div><label for={id+"_field"}>{displayName}</label></div>{el % ("id" -> (id+"_field"))}<lift:msg id={id}/></div>
       case _ => <div>{el}</div>
     }
 
+  }
+
+  def asXHtml: NodeSeq = {
+    var el = <input type="checkbox"
+      name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
+      value={value.toString}
+      tabindex={tabIndex toString}/>;
+
+    uniqueFieldId match {
+      case Full(id) =>  el % ("id" -> (id+"_field"))
+      case _ => el
+    }
   }
 
 

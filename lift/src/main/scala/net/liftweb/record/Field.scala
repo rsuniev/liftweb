@@ -112,6 +112,8 @@ trait SimpleField extends FieldLocator {
 
   def toForm: NodeSeq
 
+  def asXHtml: NodeSeq
+
   /**
    * Are we in "safe" mode (i.e., the value of the field can be read or written without any security checks.)
    */
@@ -128,6 +130,8 @@ trait SimpleField extends FieldLocator {
   def errorMessage : String = ""
 
   def validators : List[SMyType => List[Node]] = Nil
+
+  def tabIndex: Int = 1
 }
 
 trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField with FieldIdentifier {
@@ -142,6 +146,12 @@ trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField with Fie
   }
 
   override def uniqueFieldId: Can[String] = Full(name+"_id")
+
+  def label: NodeSeq = uniqueFieldId match {
+    case Full(id) =>  <label for={id+"_field"}>{displayName}</label>
+    case _ => NodeSeq.Empty
+  }
+
 }
 
 trait JDBCField[MyType, OwnerType <: Record[OwnerType]] extends Field[MyType, OwnerType]{

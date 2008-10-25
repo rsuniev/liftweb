@@ -162,6 +162,46 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
       inst.fieldByName(holder.name).map((field:Field[_, BaseRecord]) =>
         field.toForm).openOr(NodeSeq.Empty) ++ Text("\n"))
 
+  /**
+   * Returns the XHTML representation of inst Record based of a provided template
+   *
+   * @param inst - the record to be rendered
+   * @return the XHTML content as a NodeSeq
+   */
+  def toForm(inst: BaseRecord, template: NodeSeq): NodeSeq = {
+    template match {
+      case e @ <lift:field_label>{_*}</lift:field_label> => e.attribute("name") match{
+        case Some(name) => inst.fieldByName(name.toString).map((field: Field[_, _]) => field.label).openOr(NodeSeq.Empty)
+        case _ => NodeSeq.Empty
+      }
+
+      case e @ <lift:field>{_*}</lift:field> => e.attribute("name") match{
+        case Some(name) => inst.fieldByName(name.toString).map((field: Field[_, _]) => field.asXHtml).openOr(NodeSeq.Empty)
+        case _ => NodeSeq.Empty
+      }
+
+      case e @ <lift:field_msg>{_*}</lift:field_msg> => e.attribute("name") match{
+        case Some(name) => inst.fieldByName(name.toString).map((field: Field[_, _]) => field.uniqueFieldId match {
+          case Full(id) => <lift:msg id={id}/>
+          case _ => NodeSeq.Empty
+        }).openOr(NodeSeq.Empty)
+        case _ => NodeSeq.Empty
+      }
+
+      case Elem(namespace, label, attrs, scp, ns @ _*) =>
+        Elem(namespace, label, attrs, scp, toForm(inst, ns.flatMap(n => toForm(inst, n))):_* )
+
+      case s : Seq[_] => s.flatMap(e => e match {
+        case Elem(namespace, label, attrs, scp, ns @ _*) =>
+        Elem(namespace, label, attrs, scp, toForm(inst, ns.flatMap(n => toForm(inst, n))):_* )
+        case x => x
+      })
+
+    }
+  }
+
+
+
   private[record] def ??(meth: Method, inst: BaseRecord) = meth.invoke(inst, null).asInstanceOf[Field[_, BaseRecord]]
 
   /**

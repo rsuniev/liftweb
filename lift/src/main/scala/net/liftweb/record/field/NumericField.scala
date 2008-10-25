@@ -15,15 +15,32 @@ trait NumericField[MyType, OwnerType <: Record[OwnerType]] extends Field[MyType,
       this.setFromAny(s) match {
         case Empty => valueCouldNotBeSet = true
         case _ => valueCouldNotBeSet = false
-      }}}} value={value.toString}/>
+      }}}} value={value.toString}
+      tabindex={tabIndex toString}/>
 
     uniqueFieldId match {
       case Full(id) =>
-         <div id={name+"_holder"}><div><label for={name}>{displayName}</label></div>{el % ("id" -> name)}<lift:msg id={id}/></div>
+         <div id={id+"_holder"}><div><label for={id+"_field"}>{displayName}</label></div>{el % ("id" -> (id+"_field"))}<lift:msg id={id}/></div>
       case _ => <div>{el}</div>
     }
 
   }
+
+  def asXHtml: NodeSeq = {
+    var el = <input type="text" name={S.mapFunc{s: List[String] => {
+      this.setFromAny(s) match {
+        case Empty => valueCouldNotBeSet = true
+        case _ => valueCouldNotBeSet = false
+      }}}} value={value.toString}
+      tabindex={tabIndex toString}/>
+
+    uniqueFieldId match {
+      case Full(id) =>  el % ("id" -> (id+"_field"))
+      case _ => el
+    }
+  }
+
+
 
   override def errorMessage = S.??("number.required")
 }
