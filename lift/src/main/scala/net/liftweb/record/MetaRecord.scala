@@ -132,15 +132,23 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
    * @return a List of FieldError. If this list is empty you can assume that record was validated successfully
    */
   def validate(inst: BaseRecord): List[FieldError] = {
-    fieldList.flatMap(holder => inst.fieldByName(holder.name) match {
-      case Full(field) => if (!field.valueCouldNotBeSet) {
-        field.validators.flatMap(_(field.value).map(FieldError(field, _)))
-      } else {
-        FieldError(field, Text(field.errorMessage)) :: Nil
-      }
+    foreachCallback(inst, _.beforeValidation)
+    try{
+	    fieldList.flatMap(holder => inst.fieldByName(holder.name) match {
+	      case Full(field) => if (!field.valueCouldNotBeSet) {
+	        field.validators.flatMap(_(field.value).map(FieldError(field, _)))
+	      } else {
+	        FieldError(field, Text(field.errorMessage)) :: Nil
+	      }
+	      case _ => Nil
+	    })
+    } finally {
+      foreachCallback(inst, _.afterValidation)
+    }
+  }
 
-      case _ => Nil
-    })
+  private def foreachCallback(inst: BaseRecord, f: LifecycleCallbacks => Any) {
+    lifecycleCallbacks.foreach(m => f(m._2.invoke(inst, null).asInstanceOf[LifecycleCallbacks]))
   }
 
   /**
@@ -227,11 +235,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
 
 trait LifecycleCallbacks {
   def beforeValidation {}
-  def beforeValidationOnCreate {}
-  def beforeValidationOnUpdate {}
   def afterValidation {}
-  def afterValidationOnCreate {}
-  def afterValidationOnUpdate {}
 
   def beforeSave {}
   def beforeCreate {}
