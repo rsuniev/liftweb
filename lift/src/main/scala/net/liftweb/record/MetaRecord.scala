@@ -134,7 +134,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   def validate(inst: BaseRecord): List[FieldError] = {
     fieldList.flatMap(holder => inst.fieldByName(holder.name) match {
       case Full(field) => if (!field.valueCouldNotBeSet) {
-        field.validators.flatMap(_(field.value).map(_ map(FieldError(field, _))).openOr(Nil))
+        field.validators.flatMap(_(field.value).map(FieldError(field, _)))
       } else {
         FieldError(field, Text(field.errorMessage)) :: Nil
       }

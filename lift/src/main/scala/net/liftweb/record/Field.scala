@@ -23,7 +23,7 @@ import scala.xml._
 trait SimpleField extends FieldLocator {
   type SMyType
   type SOwnerType <: Record[SOwnerType]
-  type ValidationFunction = SMyType => Can[List[Node]]
+  type ValidationFunction = SMyType => Can[Node]
 
   private[record] var data: SMyType = _
   private[record] var needsDefault = true
@@ -128,14 +128,16 @@ trait SimpleField extends FieldLocator {
     fieldName
   }
 
+  /**
+   * The error message used when the fiel value could not be set
+   */
   def errorMessage : String = ""
 
   /**
    * Return a list of functions that will be subsequently called for validating this field.
-   * Each function takes a field-type parameter and returns a Can[List[Node]]. This list impersonates
-   * the list of validation error messages.
+   * Each function takes a field-type parameter and returns a Can[Node].
    *
-   * The field values is valid if all validation functions return an Empty can
+   * The field values is valid if all validation functions return an Empty Can
    */
   def validators : List[ValidationFunction] = Nil
 
