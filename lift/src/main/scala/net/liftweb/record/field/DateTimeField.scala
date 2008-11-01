@@ -13,11 +13,11 @@
 
 package net.liftweb.record.field
 
-import scala.xml._
-import net.liftweb.util._
+import _root_.scala.xml._
+import _root_.net.liftweb.util._
+import _root_.net.liftweb.http.{S, FieldError}
+import _root_.java.util.Calendar
 import Helpers._
-import net.liftweb.http.{S, FieldError}
-import java.util.Calendar
 import S._
 
 

@@ -13,10 +13,10 @@
 
 package net.liftweb.record.field
 
-import scala.xml._
-import net.liftweb.util._
+import _root_.scala.xml._
+import _root_.net.liftweb.util._
+import _root_.net.liftweb.http.{S, FieldError}
 import Helpers._
-import net.liftweb.http.{S, FieldError}
 import S._
 
 class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Boolean, OwnerType] {
