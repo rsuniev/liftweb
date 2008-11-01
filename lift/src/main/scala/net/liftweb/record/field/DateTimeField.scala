@@ -65,9 +65,9 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
   }
 
   def asXHtml: NodeSeq = {
-    var el = <input type="checkbox"
+    var el = <input type="text"
       name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
-      value={value.toString}
+      value={value match {case null => "" case s: Calendar => toInternetDate(s.getTime)}}
       tabindex={tabIndex toString}/>;
 
     uniqueFieldId match {
