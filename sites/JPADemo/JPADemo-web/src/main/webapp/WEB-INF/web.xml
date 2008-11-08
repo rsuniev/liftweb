@@ -15,7 +15,7 @@ PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
       Persistence context for the library app
     </description>
     <persistence-context-ref-name>
-      jpaweb
+      persistence/jpaweb
     </persistence-context-ref-name>
     <persistence-unit-name>
       jpaweb

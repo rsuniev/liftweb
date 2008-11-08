@@ -1,15 +1,12 @@
 package com.foo.jpaweb.model
 
 import javax.persistence._
-import scala.collection.jcl.{BufferWrapper,SetWrapper}
+import scala.collection.jcl.Conversions
 import net.liftweb.http.RequestVar
 import net.liftweb.util.{Can,Full,Empty}
 import java.util.{Date,Calendar}
 
 object JPA {
-  implicit def setToWrapper[A](set : java.util.Set[A]) = new SetWrapper[A]{override def underlying = set}
-  implicit def listToWrapper[A](list : java.util.List[A]) = new BufferWrapper[A]{override def underlying = list}
-
   def findToCan[A](f: => A): Can[A] = 
     try {  
       f match {
@@ -47,13 +44,15 @@ abstract class ScalaEntityManager(val persistanceName: String) {
   }
 
   // Common enough to combine into one op
-  def mergeAndFlush[T](entity : T) : T = {val e = merge(entity); flush(); e}
+  def persistAndFlush(entity : AnyRef) = { em.persist(entity); em.flush() }
+  def mergeAndFlush[T](entity : T) : T = {val e = merge(entity); em.flush(); e}
+  def removeAndFlush(entity : AnyRef) = { em.remove(entity); em.flush() }
 
   // methods defined on Entity Manager
   def persist(entity: AnyRef) = em.persist(entity)
   def merge[T](entity: T): T = em.merge(entity)
   def remove(entity: AnyRef) = em.remove(entity);
-  def find[A](clazz: Class[A], id: Any) = em.find[A](clazz, id).asInstanceOf[A]
+  def find[A](clazz: Class[A], id: Any) = JPA.findToCan(em.find[A](clazz, id).asInstanceOf[A])
   def flush() = em.flush()
   def setFlushMode(flushModeType: FlushModeType) = em.setFlushMode(flushModeType)
   def refresh(entity: AnyRef) = em.refresh(entity)
@@ -82,7 +81,7 @@ class ScalaQuery[A](val query: Query) {
   def setParams(params : Pair[String,Any]*) = {params.foreach(param => query.setParameter(param._1, param._2)); this}
 
   // methods defined on Query
-  def getResultList() = JPA.listToWrapper[A](query.getResultList.asInstanceOf[java.util.List[A]])
+  def getResultList() = Conversions.convertList[A](query.getResultList.asInstanceOf[java.util.List[A]])
   def getSingleResult() = query.getSingleResult.asInstanceOf[A]
   def executeUpdate() = query.executeUpdate()
   def setMaxResults(maxResult: Int) = {query.setMaxResults(maxResult);this}
