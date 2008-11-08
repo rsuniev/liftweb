@@ -31,14 +31,14 @@ object MappedPassword {
   val blankPw = "*******"
 }
 
-class MappedPassword[T<:Mapper[T]](val fieldOwner: T) 
+class MappedPassword[T<:Mapper[T]](val fieldOwner: T)
 extends MappedField[String, T] {
   override def dbColumnCount = 2
   def dbFieldClass = classOf[String]
 
   override def dbColumnNames(in : String) = in.toLowerCase+"_pw" :: in.toLowerCase+"_slt" :: Nil
 
-  override lazy val dbSelectString = 
+  override lazy val dbSelectString =
     dbColumnNames(name).
   map(cn => fieldOwner.getSingleton.dbTableName + "." + cn).
   mkString(", ")
@@ -119,7 +119,7 @@ extends MappedField[String, T] {
    */
   override def _toForm: Can[NodeSeq] = {
     val funcName = S.mapFunc({s: List[String] => this.setFromAny(s)})
-    Full(<span><input type='password' name={funcName}
+    Full(<span><input id={fieldId} type='password' name={funcName}
 	 value={is.toString}/>&nbsp;{S.??("repeat")}&nbsp;<input
 	 type='password' name={funcName}
 	 value={is.toString}/></span>)

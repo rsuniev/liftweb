@@ -63,7 +63,7 @@ object Model extends ScalaEntityManager("jpaweb") {
    This method allows me to clean up my code a bit and only handle JPA-related exceptions.
    An example usage would be:
 
-   def addFood(newFood : Food) = 
+   def addFood(newFood : Food) =
      wrapEM({
        Model.persist(newFood)
        S.redirectTo("/food/list")
@@ -104,9 +104,9 @@ object Model extends ScalaEntityManager("jpaweb") {
     } catch {
       // Special case. Usually we want to know why it failed to commit, not just that it failed
       case re : RollbackException => {
-	val (cause,message) = if (re.getCause() == null) { 
-	  (re,"No cause") 
-	} else { 
+	val (cause,message) = if (re.getCause() == null) {
+	  (re,"No cause")
+	} else {
 	  (re.getCause(), re.getCause().getMessage())
 	}
 	Log.error("EM Commit error", re)

@@ -47,7 +47,7 @@ object SHtml {
   def ajaxButton(text: String, func: () => JsCmd): Elem =
   ajaxButton(Text(text), func)
 //    <button onclick={makeAjaxCall(Str(mapFunc(func)+"=true"))}>{text}</button>
-  
+
   /**
    * create an anchor tag around a body which will do an AJAX call and invoke the function
    *
@@ -97,7 +97,7 @@ object SHtml {
    */
   private def ajaxCall_*(jsCalcValue: JsExp, func: AFuncHolder): JsExp =
   makeAjaxCall(JsRaw("'"+mapFunc(func)+"=' + "+jsCalcValue.toJsCmd))
-                               
+
 
   def toggleKids(head: Elem, visible: Boolean, func: () => Any, kids: Elem): NodeSeq = {
     val funcName = mapFunc(func)
@@ -133,9 +133,9 @@ object SHtml {
         ("onkeypress" -> """var e = event ; var char = ''; if (e && e.which) {char = e.which;} else {char = e.keyCode;}; if (char == 13) {this.blur(); return false;} else {return true;};""") %
         ("onblur" -> makeAjaxCall(JsRaw("'" +funcName + "=' + encodeURIComponent(this.value)")))
   }
-  
+
   def ajaxCheckbox(value: Boolean, func: Boolean => JsCmd): Elem = ajaxCheckbox_*(value, LFuncHolder(in =>  func(in.exists(toBoolean(_)))))
-  
+
   private def ajaxCheckbox_*(value: Boolean, func: AFuncHolder): Elem = {
     val funcName = mapFunc(func)
       (<input type="checkbox"/>) % checked(value) % ("onclick" -> makeAjaxCall(JsRaw("'" + funcName+"='+this.checked")))
@@ -163,8 +163,8 @@ object SHtml {
     val (rs, sid) = findOrAddId(shown)
     val (rh, hid) = findOrAddId(hidden)
     val ui = LiftRules.jsArtifacts
-    (<span>{rs % ("onclick" -> (ui.hide(sid).cmd & 
-                                 ui.showAndFocus(hid).cmd & JsRaw("return false;")))} 
+    (<span>{rs % ("onclick" -> (ui.hide(sid).cmd &
+                                 ui.showAndFocus(hid).cmd & JsRaw("return false;")))}
            {dealWithBlur(rh % ("style" -> "display: none"), (ui.show(sid).cmd & ui.hide(hid).cmd))}
      </span>)
   }
@@ -207,15 +207,15 @@ object SHtml {
   def submit_*(value: String, func: AFuncHolder): Elem = makeFormElement("submit", func) % new UnprefixedAttribute("value", Text(value), Null)
   def text(value: String, func: String => Any): Elem = makeFormElement("text", SFuncHolder(func)) % new UnprefixedAttribute("value", Text(value), Null)
   def password(value: String, func: String => Any): Elem = makeFormElement("password", SFuncHolder(func)) % new UnprefixedAttribute("value", Text(value), Null)
-  def hidden(func: => Any): Elem = makeFormElement("hidden", NFuncHolder(() => func)) % ("value" -> "true")
-  def submit(value: String, func: => Any): Elem = makeFormElement("submit", NFuncHolder(() => func)) % new UnprefixedAttribute("value", Text(value), Null)
+  def hidden(func: () => Any): Elem = makeFormElement("hidden", NFuncHolder(func)) % ("value" -> "true")
+  def submit(value: String, func: () => Any): Elem = makeFormElement("submit", NFuncHolder(func)) % new UnprefixedAttribute("value", Text(value), Null)
 
   def ajaxForm(body: NodeSeq) = (<lift:form>{body}</lift:form>)
   def ajaxForm(onSubmit: JsCmd, body: NodeSeq) = (<lift:form onsubmit={onSubmit.toJsCmd}>{body}</lift:form>)
   def ajaxForm(body: NodeSeq, onSubmit: JsCmd) = (<lift:form onsubmit={onSubmit.toJsCmd}>{body}</lift:form>)
 
-  def jsonForm(jsonHandler: JsonHandler, body : => NodeSeq): NodeSeq = jsonForm(jsonHandler, Noop, body)
-  def jsonForm(jsonHandler: JsonHandler, onSubmit: JsCmd, body : => NodeSeq): NodeSeq = {
+  def jsonForm(jsonHandler: JsonHandler, body: NodeSeq): NodeSeq = jsonForm(jsonHandler, Noop, body)
+  def jsonForm(jsonHandler: JsonHandler, onSubmit: JsCmd, body: NodeSeq): NodeSeq = {
     val id = "F"+randomString(15)
     <form onsubmit={(onSubmit & jsonHandler.call("processForm", FormToJSON(id)) & JsReturn(false)).toJsCmd} id={id}>
       {body}

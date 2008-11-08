@@ -20,7 +20,7 @@ import _root_.net.liftweb.mapper._
 import _root_.net.liftweb.http._
 import js._
 import JsCmds._
-import _root_.scala.xml.{NodeSeq, Node, Group}
+import _root_.scala.xml.{NodeSeq, Node, Group, Text}
 import _root_.scala.xml.transform._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.sitemap.Loc._
@@ -36,58 +36,74 @@ trait ProtoUser[T <: ProtoUser[T]] extends KeyedMapper[Long, T] with UserIdAsStr
 
   // the primary key for the database
   object id extends MappedLongIndex(this)
-  
+
   def userIdAsString: String = id.is.toString
 
   // First Name
-  object firstName extends MappedString(this, 32)
-  
+  object firstName extends MappedString(this, 32) {
+    override def displayName = fieldOwner.firstNameDisplayName
+    override val fieldId = Some(Text("txtFirstName"))
+  }
+
+  def firstNameDisplayName = ??("First Name")
+
   // Last Name
-  object lastName extends MappedString(this, 32)
-  
+  object lastName extends MappedString(this, 32) {
+    override def displayName = fieldOwner.lastNameDisplayName
+    override val fieldId = Some(Text("txtLastName"))
+  }
+
+  def lastNameDisplayName = ??("Last Name")
+
   // Email
   object email extends MappedEmail(this, 48) {
     override def dbIndexed_? = true
     override def validations = valUnique(S.??("unique.email.address")) _ :: super.validations
+    override def displayName = fieldOwner.emailDisplayName
+    override val fieldId = Some(Text("txtEmail"))
   }
-  
+
+  def emailDisplayName = ??("Email")
   // Password
-  object password extends MappedPassword[T](this)
-  
-  
+  object password extends MappedPassword[T](this) {
+    override def displayName = fieldOwner.passwordDisplayName
+  }
+
+  def passwordDisplayName = ??("Password")
+
   object superUser extends MappedBoolean(this) {
     override def defaultValue = false
   }
-  
+
   def niceName: String = (firstName.is, lastName.is, email.is) match {
     case (f, l, e) if f.length > 1 && l.length > 1 => f+" "+l+" ("+e+")"
     case (f, _, e) if f.length > 1 => f+" ("+e+")"
     case (_, l, e) if l.length > 1 => l+" ("+e+")"
     case (_, _, e) => e
   }
-  
+
   def shortName: String = (firstName.is, lastName.is) match {
     case (f, l) if f.length > 1 && l.length > 1 => f+" "+l
     case (f, _) if f.length > 1 => f
     case (_, l) if l.length > 1 => l
     case _ => email.is
   }
-  
+
   def niceNameWEmailLink = <a href={"mailto:"+email.is}>{niceName}</a>
 }
 
 trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMetaMapper[Long, ModelType] {
   self: ModelType =>
-  
+
   def signupFields: List[BaseOwnedMappedField[ModelType]] = firstName :: lastName :: email :: locale :: timezone :: password :: Nil
-  
+
   override def fieldOrder: List[BaseOwnedMappedField[ModelType]] = firstName :: lastName :: email :: locale :: timezone :: password :: Nil
-  
+
   /**
    * If the
    */
   def screenWrap: Can[Node] = Empty
-  
+
   val basePath: List[String] = "user_mgt" :: Nil
   def signUpSuffix = "sign_up"
   lazy val signUpPath = thePath(signUpSuffix)
@@ -105,11 +121,11 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
   lazy val editPath = thePath(editSuffix)
   def validateUserSuffix = "validate_user"
   lazy val validateUserPath = thePath(validateUserSuffix)
-  
+
   def homePage = "/"
 
 
-  
+
   case class MenuItem(name: String, path: List[String], loggedIn: Boolean) {
     lazy val endOfPath = path.last
     lazy val pathStr: String = path.mkString("/", "/", "")
@@ -118,21 +134,21 @@ trait MetaMegaProtoUser[ModelType <: MegaProtoUser[ModelType]] extends KeyedMeta
       case _ => true
     }
   }
-  
+
   def thePath(end: String): List[String] = basePath ::: List(end)
-  
+
   /**
    * Return the URL of the "login" page
    */
   def loginPageURL = loginPath.mkString("/","/", "")
-  
-  def notLoggedIn_? = !loggedIn_? 
-  
+
+  def notLoggedIn_? = !loggedIn_?
+
   lazy val testLogginIn = If(loggedIn_? _, S.??("must.be.logged.in")) ;
 
-lazy val testSuperUser = If(superUser_? _, S.??("must.be.super.user"))
+  lazy val testSuperUser = If(superUser_? _, S.??("must.be.super.user"))
 
-def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
+  def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
 
   /**
    * The menu item for login (make this "Empty" to disable)
@@ -141,20 +157,20 @@ def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
     Full(Menu(Loc("Login", loginPath, S.??("login"),
                   If(notLoggedIn_? _, S.??("already.logged.in")))))
   }
-  
+
   /**
    * The menu item for logout (make this "Empty" to disable)
    */
   def logoutMenuLoc: Can[Menu] =
   Full(Menu(Loc("Logout", logoutPath, S.??("logout"), testLogginIn)))
-  
+
   /**
    * The menu item for creating the user/sign up (make this "Empty" to disable)
    */
   def createUserMenuLoc: Can[Menu] =
   Full(Menu(Loc("CreateUser", signUpPath,
                 S.??("sign.up"), If(notLoggedIn_? _, S.??("logout.first")))))
-  
+
   /**
    * The menu item for lost password (make this "Empty" to disable)
    */
@@ -162,7 +178,7 @@ def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
   Full(Menu(Loc("LostPassword", lostPasswordPath,
                 S.??("lost.password"),
                 If(notLoggedIn_? _, S.??("logout.first"))))) // not logged in
-  
+
   /**
    * The menu item for resetting the password (make this "Empty" to disable)
    */
@@ -171,20 +187,20 @@ def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
                 S.??("reset.password"), Hidden,
                 If(notLoggedIn_? _,
                    S.??("logout.first"))))) //not Logged in
-  
+
   /**
    * The menu item for editing the user (make this "Empty" to disable)
    */
   def editUserMenuLoc: Can[Menu] =
   Full(Menu(Loc("EditUser", editPath, S.??("edit.user"), testLogginIn)))
-  
+
   /**
    * The menu item for changing password (make this "Empty" to disable)
    */
   def changePasswordMenuLoc: Can[Menu] =
   Full(Menu(Loc("ChangePassword", changePasswordPath,
                 S.??("change.password"), testLogginIn)))
-  
+
   /**
    * The menu item for validating a user (make this "Empty" to disable)
    */
@@ -192,23 +208,23 @@ def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
   Full(Menu(Loc("ValidateUser", (validateUserPath, true),
                 S.??("validate.user"), Hidden,
                 If(notLoggedIn_? _, S.??("logout.first")))))
-  
+
   lazy val sitemap: List[Menu] =
   List(loginMenuLoc, logoutMenuLoc, createUserMenuLoc,
        lostPasswordMenuLoc, resetPasswordMenuLoc,
        editUserMenuLoc, changePasswordMenuLoc,
        validateUserMenuLoc).flatten(a => a)
-  
-  
+
+
   def skipEmailValidation = false
-  
+
   def userMenu: List[Node] = {
     val li = loggedIn_?
     ItemList.
     filter(i => i.display && i.loggedIn == li).
     map(i => (<a href={i.pathStr}>{i.name}</a>))
   }
-  
+
   lazy val ItemList: List[MenuItem] = MenuItem(S.??("sign.up"), signUpPath, false) ::
   MenuItem(S.??("log.in"), loginPath, false) ::
   MenuItem(S.??("lost.password"), lostPasswordPath, false) ::
@@ -217,46 +233,46 @@ def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
   MenuItem(S.??("log.out"), logoutPath, true) ::
   MenuItem(S.??("edit.profile"), editPath, true) ::
   MenuItem("", validateUserPath, false) :: Nil
-  
+
   def templates: LiftRules.TemplatePf = {
     case RequestState(path, "", _)
-    if path.startsWith(signUpPath) && testLoggedIn(signUpSuffix) => () => signup
-    
+      if path.startsWith(signUpPath) && testLoggedIn(signUpSuffix) => () => signup
+
     case RequestState(path, "", _)
       if path.startsWith(loginPath) && testLoggedIn(loginSuffix) => () => login
-    
+
     case RequestState(path, "", _)
       if path.startsWith(lostPasswordPath) &&
       testLoggedIn(lostPasswordSuffix) => () => lostPassword
-    
+
     case RequestState(path, "", _)
       if path.startsWith(passwordResetPath) &&
       testLoggedIn(passwordResetSuffix) =>
       () => passwordReset(path.drop(passwordResetPath.length).head)
-    
+
     case RequestState(path, "", _)
       if path.startsWith(changePasswordPath) &&
       testLoggedIn(changePasswordSuffix) => () => changePassword
-    
+
     case RequestState(path, "", _)
       if path.startsWith(logoutPath) &&
       testLoggedIn(logoutSuffix) => () => logout
-    
+
     case RequestState(path, "", _)
       if path.startsWith(editPath) && testLoggedIn(editSuffix) => () => edit
-    
+
     case RequestState(path, "", _)
       if path.startsWith(validateUserPath) &&
       testLoggedIn(validateUserSuffix) =>
       () => validateUser(path.drop(validateUserPath.length).head)
   }
-  
+
   def requestLoans: List[LoanWrapper] = Nil // List(curUser)
-  
+
   var onLogIn: List[ModelType => Unit] = Nil
 
   var onLogOut: List[Can[ModelType] => Unit] = Nil
-   
+
   def loggedIn_? : Boolean = currentUserId.isDefined
 
   def logUserIdIn(id: String) {
@@ -294,8 +310,8 @@ def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
           <tr><td>&nbsp;</td><td><user:submit/></td></tr>
                                         </table></form>)
   }
-  
-  
+
+
   def signupMailBody(user: ModelType, validationLink: String) = {
     (<html>
         <head>
@@ -314,26 +330,26 @@ def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
         </body>
      </html>)
   }
-  
+
   def signupMailSubject = S.??("sign.up.confirmation")
-  
+
   def sendValidationEmail(user: ModelType) {
     val resetLink = S.hostAndPath+"/"+validateUserPath.mkString("/")+
     "/"+user.uniqueId
-    
+
     val email: String = user.email
-    
+
     val msgXml = signupMailBody(user, resetLink)
-    
+
     Mailer.sendMail(From(emailFrom),Subject(signupMailSubject),
                     (To(user.email) :: xmlToMailBodyType(msgXml) ::
                      (bccEmail.toList.map(BCC(_)))) :_* )
   }
-  
+
   def signup = {
     val theUser: ModelType = create
     val theName = signUpPath.mkString("")
-    
+
     def testSignup() {
       theUser.validate match {
         case Nil => S.removeSessionTemplater(theName)
@@ -346,55 +362,55 @@ def superUser_? : Boolean = currentUser.map(_.superUser.is) openOr false
             S.notice(S.??("welcome"))
             logUserIn(theUser)
           }
-        
+
           S.redirectTo(homePage)
-        
+
         case xs => S.error(xs)
       }
     }
-    
-    def innerSignup = bind("user", 
+
+    def innerSignup = bind("user",
                            signupXhtml(theUser),
-                           "submit" -> SHtml.submit(S.??("sign.up"), testSignup()))
-    
+                           "submit" -> SHtml.submit(S.??("sign.up"), testSignup _))
+
     S.addSessionTemplater(theName, {
         case RequestState(path, "", _)
           if path.startsWith(signUpPath) && testLoggedIn(signUpSuffix) =>  () => innerSignup
       })
     innerSignup
   }
-  
+
   def emailFrom = "noreply@"+S.hostName
-  
+
   def bccEmail: Can[String] = Empty
-  
+
   def testLoggedIn(page: String): Boolean =
   ItemList.filter(_.endOfPath == page) match {
     case x :: xs if x.loggedIn == loggedIn_? => true
     case _ => false
   }
-  
-  
+
+
   def validateUser(id: String): NodeSeq = getSingleton.find(By(uniqueId, id)) match {
     case Full(user) if !user.validated =>
       user.validated(true).uniqueId.reset().save
       S.notice(S.??("account.validated"))
       logUserIn(user)
       S.redirectTo(homePage)
-    
+
     case _ => S.error(S.??("invalid.validation.link")); S.redirectTo(homePage)
   }
-  
-def loginXhtml = {
-  (<form method="POST" action={S.uri}><table><tr><td
-            colspan="2">{S.??("log.in")}</td></tr>
-        <tr><td>{S.??("email.address")}</td><td><user:email /></td></tr>
-        <tr><td>{S.??("password")}</td><td><user:password /></td></tr>
-        <tr><td><a href={lostPasswordPath.mkString("/", "/", "")}
-              >{S.??("recover.password")}</a></td><td><user:submit /></td></tr></table>
-   </form>)
-}
-  
+
+  def loginXhtml = {
+    (<form method="POST" action={S.uri}><table><tr><td
+              colspan="2">{S.??("log.in")}</td></tr>
+          <tr><td>{S.??("email.address")}</td><td><user:email /></td></tr>
+          <tr><td>{S.??("password")}</td><td><user:password /></td></tr>
+          <tr><td><a href={lostPasswordPath.mkString("/", "/", "")}
+                >{S.??("recover.password")}</a></td><td><user:submit /></td></tr></table>
+     </form>)
+  }
+
   def login = {
     if (S.post_?) {
       S.param("username").
@@ -402,20 +418,20 @@ def loginXhtml = {
         case Full(user) if user.validated &&
           user.password.match_?(S.param("password").openOr("*")) =>
           logUserIn(user); S.notice(S.??("logged.in")); S.redirectTo(homePage)
-        
+
         case Full(user) if !user.validated =>
           S.error(S.??("account.validation.error"))
-        
+
         case _ => S.error(S.??("invalid.credentials"))
       }
     }
-    
+
     bind("user", loginXhtml,
-    "email" -> (FocusOnLoad(<input type="text" name="username"/>)),
-    "password" -> (<input type="password" name="password"/>),
-    "submit" -> (<input type="submit" value={S.??("log.in")}/>))
+         "email" -> (FocusOnLoad(<input type="text" name="username"/>)),
+         "password" -> (<input type="password" name="password"/>),
+         "submit" -> (<input type="submit" value={S.??("log.in")}/>))
   }
-  
+
   def lostPasswordXhtml = {
     (<form method="POST" action={S.uri}>
         <table><tr><td
@@ -425,7 +441,7 @@ def loginXhtml = {
         </table>
      </form>)
   }
-  
+
   def passwordResetMailBody(user: ModelType, resetLink: String) = {
     (<html>
         <head>
@@ -444,41 +460,41 @@ def loginXhtml = {
         </body>
      </html>)
   }
-  
+
   def passwordResetEmailSubject = S.??("reset.password.request")
-  
+
   def sendPasswordReset(email: String) {
     getSingleton.find(By(this.email, email)) match {
       case Full(user) if user.validated =>
         user.uniqueId.reset().save
         val resetLink = S.hostAndPath+
         passwordResetPath.mkString("/", "/", "/")+user.uniqueId
-      
+
         val email: String = user.email
-      
+
         val msgXml = passwordResetMailBody(user, resetLink)
         Mailer.sendMail(From(emailFrom),Subject(passwordResetEmailSubject),
                         (To(user.email) :: xmlToMailBodyType(msgXml) ::
                          (bccEmail.toList.map(BCC(_)))) :_*)
-      
+
         S.notice(S.??("password.reset.email.sent"))
         S.redirectTo(homePage)
-      
+
       case Full(user) =>
         sendValidationEmail(user)
         S.notice(S.??("account.validation.resent"))
         S.redirectTo(homePage)
-      
+
       case _ => S.error(S.??("email.address.not.found"))
     }
   }
-  
+
   def lostPassword = {
-    bind("user", lostPasswordXhtml, 
+    bind("user", lostPasswordXhtml,
          "email" -> SHtml.text("", sendPasswordReset _),
          "submit" -> <input type="Submit" value={S.??("send.it")} />)
   }
-  
+
   def passwordResetXhtml = {
     (<form method="POST" action={S.uri}>
         <table><tr><td colspan="2">{S.??("reset.your.password")}</td></tr>
@@ -488,7 +504,7 @@ def loginXhtml = {
         </table>
      </form>)
   }
-  
+
   def passwordReset(id: String) =
   getSingleton.find(By(uniqueId, id)) match {
     case Full(user) =>
@@ -497,19 +513,19 @@ def loginXhtml = {
           case Nil => S.notice(S.??("password.changed"))
             user.save
             logUserIn(user); S.redirectTo(homePage)
-        
+
           case xs => S.error(xs)
         }
       }
       user.uniqueId.reset().save
-    
+
       bind("user", passwordResetXhtml,
            "pwd" -> SHtml.password_*("",(p: List[String]) =>
-                                     user.password.setList(p)),
-           "submit" -> SHtml.submit(S.??("set.password"), finishSet()))
+          user.password.setList(p)),
+           "submit" -> SHtml.submit(S.??("set.password"), finishSet _))
     case _ => S.error(S.??("pasword.link.invalid")); S.redirectTo(homePage)
   }
-  
+
   def changePasswordXhtml = {
     (<form method="POST" action={S.uri}>
         <table><tr><td colspan="2">{S.??("change.password")}</td></tr>
@@ -520,12 +536,12 @@ def loginXhtml = {
         </table>
      </form>)
   }
-  
+
   def changePassword = {
     val user = currentUser.open_! // we can do this because the logged in test has happened
     var oldPassword = ""
     var newPassword: List[String] = Nil
-    
+
     def testAndSet() {
       if (!user.password.match_?(oldPassword)) S.error(S.??("wrong.old.password"))
       else {
@@ -536,13 +552,13 @@ def loginXhtml = {
         }
       }
     }
-    
+
     bind("user", changePasswordXhtml,
          "old_pwd" -> SHtml.password("", oldPassword = _),
          "new_pwd" -> SHtml.password_*("", LFuncHolder(newPassword = _)),
-         "submit" -> SHtml.submit(S.??("change"), testAndSet()))
+         "submit" -> SHtml.submit(S.??("change"), testAndSet _))
   }
-  
+
   def editXhtml(user: ModelType) = {
     (<form method="POST" action={S.uri}>
         <table><tr><td colspan="2">{S.??("edit")}</td></tr>
@@ -551,37 +567,37 @@ def loginXhtml = {
         </table>
      </form>)
   }
-  
+
   def edit = {
     val theUser: ModelType = currentUser.open_! // we know we're logged in
     val theName = editPath.mkString("")
-    
+
     def testEdit() {
       theUser.validate match {
         case Nil => S.removeSessionTemplater(theName)
           theUser.save
           S.notice(S.??("profle.updated"))
           S.redirectTo(homePage)
-        
+
         case xs => S.error(xs)
       }
     }
-    
-    def innerEdit = bind("user", editXhtml(theUser), 
-                         "submit" -> SHtml.submit(S.??("edit"), testEdit()))
-    
+
+    def innerEdit = bind("user", editXhtml(theUser),
+                         "submit" -> SHtml.submit(S.??("edit"), testEdit _))
+
     S.addSessionTemplater(theName, {
         case RequestState(path, "", _)
           if path.startsWith(editPath) && testLoggedIn(editSuffix) =>
           () => innerEdit})
     innerEdit
   }
-  
+
   def logout = {
     logoutCurrentUser
     S.redirectTo(homePage)
   }
-  
+
   private def localForm(user: ModelType, ignorePassword: Boolean): NodeSeq = {
     signupFields.
     map(fi => getSingleton.getActualBaseField(user, fi)).
@@ -590,10 +606,10 @@ def loginXhtml = {
           case _ => true
         })).
     flatMap(f =>
-            f.toForm.toList.map(form =>
-                                (<tr><td>{f.displayName}</td><td>{form}</td></tr>) ) )
+      f.toForm.toList.map(form =>
+        (<tr><td>{f.displayName}</td><td>{form}</td></tr>) ) )
   }
-  
+
   implicit def nodeSeqToOption(in: NodeSeq): Can[NodeSeq] =
   screenWrap.map{
     theDoc =>
@@ -613,13 +629,24 @@ trait MegaProtoUser[T <: MegaProtoUser[T]] extends ProtoUser[T] {
     override def dbIndexed_? = true
     override def writePermission_?  = true
   }
-  
+
   object validated extends MappedBoolean[T](this) {
     override def defaultValue = false
+    override val fieldId = Some(Text("txtValidated"))
   }
-  
-  object locale extends MappedLocale[T](this)
-  
-  object timezone extends MappedTimeZone[T](this)
-  
+
+  object locale extends MappedLocale[T](this) {
+    override def displayName = fieldOwner.localeDisplayName
+    override val fieldId = Some(Text("txtLocale"))
+  }
+
+  object timezone extends MappedTimeZone[T](this) {
+    override def displayName = fieldOwner.timezoneDisplayName
+    override val fieldId = Some(Text("txtTimeZone"))
+  }
+
+  def timezoneDisplayName = ??("Time Zone")
+
+  def localeDisplayName = ??("Locale")
+
 }

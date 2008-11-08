@@ -46,6 +46,6 @@ class AuthorOps {
     bind("author", xhtml,
 	 "id" -> SHtml.hidden({authorVar(Model.merge(heldAuthor))}),
 	 "name" -> SHtml.text(author.name, author.name = _),
-	 "submit" -> SHtml.submit(?("Save"), doAdd))
+	 "submit" -> SHtml.submit(?("Save"), doAdd _))
   }
 }

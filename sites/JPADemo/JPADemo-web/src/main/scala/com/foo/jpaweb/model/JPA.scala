@@ -13,15 +13,15 @@ object JPA {
         case found: A => Full(found)
         case null => Empty
       }
-    } catch {  
+    } catch {
       case e: NoResultException => Empty
     }
 
 }
 
 abstract class ScalaEntityManager(val persistanceName: String) {
-  // The concrete impl should provide these methods 
-  protected def openEM () : EntityManager 
+  // The concrete impl should provide these methods
+  protected def openEM () : EntityManager
   protected def closeEM (em : EntityManager)
 
   private object emVar extends RequestVar(openEM()) {

@@ -120,20 +120,29 @@ trait HttpHelpers { self: ListHelpers with StringHelpers  =>
     }
   }
 
+
   /**
    * Transform a pair (name: String, value: Any) to an unprefixed XML attribute name="value"
    */
+
   implicit def pairToUnprefixed(in: (String, Any)): MetaData = {
     val value: Option[NodeSeq] = in._2 match {
       case null => None
       case js: ToJsCmd => Some(Text(js.toJsCmd))
       case n: Node => Some(n)
       case n: NodeSeq => Some(n)
+      case None => None
+      case Some(n: Node) => Some(n)
+      case Some(n: NodeSeq) => Some(n)
+      case Empty => None
+      case Full(n: Node) => Some(n)
+      case Full(n: NodeSeq) => Some(n)
       case s => Some(Text(s.toString))
     }
-    
+
     value.map(v => new UnprefixedAttribute(in._1, v, Null)) getOrElse Null
   }
+
 
   /**
    * If the incoming Elem has an 'id', return it, otherwise
@@ -150,7 +159,7 @@ trait HttpHelpers { self: ListHelpers with StringHelpers  =>
     }
     case x :: xs => (in, x.text)
   }
-  
+
   private case class BailOut(seq: Long)
   import _root_.scala.actors._
   import Actor._
