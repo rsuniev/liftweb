@@ -59,7 +59,7 @@ class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Numeri
     try{
       Full(set(java.lang.Double.parseDouble(s)));
     } catch {
-      case e: Exception => Empty
+      case e: Exception => valueCouldNotBeSet = true; Empty
     }
   }
 

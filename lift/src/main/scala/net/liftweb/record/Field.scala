@@ -30,11 +30,18 @@ trait SimpleField extends FieldLocator {
   private[record] var obscured: SMyType = _
   private[record] var fieldName: String = _
   private[record] var valueCouldNotBeSet = false
+  private[record] var dirty = false
 
   /**
    * Return the owner of this field
    */
   def owner: SOwnerType
+
+  protected def dirty_?(b: Boolean) = dirty = b
+
+  def resetDirty {
+    if (safe_?) dirty_?(false)
+  }
 
   /**
    * Should the field be ignored by the OR Mapper?
@@ -85,12 +92,17 @@ trait SimpleField extends FieldLocator {
 
   def set(in: SMyType): SMyType = synchronized {
     if (checkCanWrite_?) {
-        data = in
+        data = set_!(in)
         valueCouldNotBeSet = false
+        needsDefault = false
+    } else {
+        valueCouldNotBeSet = true
         needsDefault = false
     }
     data
   }
+
+  protected def set_!(in: SMyType) = in
 
   def setFromAny(in: Any): Can[SMyType]
 

@@ -50,7 +50,7 @@ class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericFi
     try{
       Full(set(java.lang.Integer.parseInt(s)));
     } catch {
-      case e: Exception => Empty
+      case e: Exception => valueCouldNotBeSet = true; Empty
     }
   }
 

@@ -39,17 +39,17 @@ abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLe
   override def setFromAny(in: Any): Can[String] = {
     in match {
       case seq: Seq[_] if !seq.isEmpty => seq.map(setFromAny)(0)
-      case (s: String) :: _ => Full(this.set(s))
-      case null => Full(this.set(null))
-      case s: String => Full(this.set(s))
-      case Some(s: String) => Full(this.set(s))
-      case Full(s: String) => Full(this.set(s))
-      case None | Empty | Failure(_, _, _) => Full(this.set(null))
+      case (s: String) :: _ => Full(set(s))
+      case null => Full(set(null))
+      case s: String => Full(set(s))
+      case Some(s: String) => Full(set(s))
+      case Full(s: String) => Full(set(s))
+      case None | Empty | Failure(_, _, _) => Full(set(null))
       case o => Full(this.set(o.toString))
     }
   }
 
-  def setFromString(s: String) : Can[SMyType] = Full(s)
+  def setFromString(s: String) : Can[SMyType] = Full(set(s))
 
   override def toForm = {
     var el = <input type="text" maxlength={maxLength.toString}
