@@ -28,18 +28,13 @@
     </Arg>
   </New>
 
-  <!-- Bind the persistence module factory first -->
-  <Call id="jpawebEMF" class="javax.persistence.Persistence" name="createEntityManagerFactory">
-    <Arg>jpaweb</Arg>
-  </Call>
-
-  <!-- And now the EM -->  
-  <New id="jpawebEM" class="org.mortbay.jetty.plus.naming.EnvEntry">
+  <!-- Bind the EM -->  
+  <New id="jpawebEM" class="org.mortbay.jetty.plus.naming.Resource">
     <Arg>persistence/jpaweb</Arg>
     <Arg>
-      <Ref id="jpawebEMF">
-	<Call name="createEntityManager" />
-      </Ref>
+      <New class="net.liftweb.jpademo.util.EntityManagerObjectFactory">
+	<Arg>jpaweb</Arg>
+      </New>
     </Arg>
   </New>
 

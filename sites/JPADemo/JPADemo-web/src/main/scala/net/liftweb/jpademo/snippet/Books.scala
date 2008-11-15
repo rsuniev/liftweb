@@ -51,7 +51,7 @@ class BookOps {
   def book = bookVar.is
 
   def add (xhtml : NodeSeq) : NodeSeq = {
-    def doAdd = Model.wrapEM({
+    def doAdd () = Model.wrapEM({
       Model.flush()
       redirectTo("list")
     }, {
@@ -67,7 +67,7 @@ class BookOps {
     val default = Can.legacyNullTest(book.author).map(_.id.toString)
 
     bind("book", xhtml,
-	 "id" -> SHtml.hidden({bookVar(Model.merge(heldBook))}),
+	 "id" -> SHtml.hidden({() => bookVar(Model.merge(heldBook))}),
 	 "title" -> SHtml.text(book.title, book.title = _),
 	 "published" -> SHtml.text(formatter.format(book.published), {id : String => book.published = formatter.parse(id)}) % ("id" -> "published"),
 	 "genre" -> SHtml.select(Genre.getNameDescriptionList, (Can.legacyNullTest(book.genre).map(_.toString) or Full("")), choice => book.genre = Genre.valueOf(choice)),

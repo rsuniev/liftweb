@@ -43,7 +43,7 @@ class AuthorOps {
   def author = authorVar.is
 
   def add (xhtml : NodeSeq) : NodeSeq = {
-    def doAdd = Model.wrapEM({
+    def doAdd () = Model.wrapEM({
       if (author.name.length == 0) {
 	error("emptyAuthor", "The author's name cannot be blank")
       } else {
@@ -59,7 +59,7 @@ class AuthorOps {
     val heldAuthor = author
 
     bind("author", xhtml,
-	 "id" -> SHtml.hidden({authorVar(Model.merge(heldAuthor))}),
+	 "id" -> SHtml.hidden({() => authorVar(Model.merge(heldAuthor))}),
 	 "name" -> SHtml.text(author.name, author.name = _),
 	 "submit" -> SHtml.submit(?("Save"), doAdd))
   }
