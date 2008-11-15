@@ -21,7 +21,7 @@ import S._
 
 
 class BinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Array[Byte], OwnerType] {
-  override def owner = rec
+  def owner = rec
 
   def this(rec: OwnerType, value: Array[Byte]) = {
     this(rec)
@@ -31,14 +31,14 @@ class BinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[
   /**
    * Sets the field value from an Any
    */
-   override def setFromAny(f: Any): Can[Array[Byte]] = Full(this.set(
-     f match {
-       case null => Array()
-       case arr : Array[Byte] => f.asInstanceOf[Array[Byte]];
-       case _ => f.toString.getBytes("UTF-8")
-     }))
+  def setFromAny(f: Any): Can[Array[Byte]] = Full(this.set(
+    f match {
+      case null => Array()
+      case arr : Array[Byte] => f.asInstanceOf[Array[Byte]];
+      case _ => f.toString.getBytes("UTF-8")
+    }))
 
-   override def setFromString(s: String) : Can[Array[Byte]] = {
+  def setFromString(s: String) : Can[Array[Byte]] = {
     try{
       Full(set(s.getBytes("UTF-8")));
     } catch {
@@ -46,11 +46,11 @@ class BinaryField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[
     }
   }
 
-  override def toForm = NodeSeq.Empty
+  def toForm = NodeSeq.Empty
 
   def asXHtml: NodeSeq = NodeSeq.Empty
 
-  override def defaultValue = Array(0)
+  def defaultValue = Array(0)
 
 }
 
@@ -60,7 +60,8 @@ import net.liftweb.mapper.{DriverType}
 /**
  * An int field holding DB related logic
  */
-abstract class DBBinaryField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends BinaryField[OwnerType](rec) {
+abstract class DBBinaryField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends BinaryField[OwnerType](rec)
+  with JDBCFieldFlavor[Array[Byte]] {
 
   def targetSQLType = Types.BINARY
 

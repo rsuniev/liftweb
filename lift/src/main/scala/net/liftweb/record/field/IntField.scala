@@ -21,7 +21,7 @@ import S._
 
 class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericField[Int, OwnerType] {
 
-  override def owner = rec
+  def owner = rec
 
   def this(rec: OwnerType, value: Int) = {
     this(rec)
@@ -31,7 +31,7 @@ class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericFi
   /**
    * Sets the field value from an Any
    */
-  override def setFromAny(in: Any): Can[Int] = {
+  def setFromAny(in: Any): Can[Int] = {
     in match {
       case n: Int => Full(this.set(n))
       case n: Number => Full(this.set(n.intValue))
@@ -46,7 +46,7 @@ class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericFi
     }
   }
 
-   override def setFromString(s: String) : Can[Int] = {
+  def setFromString(s: String) : Can[Int] = {
     try{
       Full(set(java.lang.Integer.parseInt(s)));
     } catch {
@@ -54,7 +54,7 @@ class IntField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericFi
     }
   }
 
-  override def defaultValue = 0
+  def defaultValue = 0
 
 }
 
@@ -64,7 +64,8 @@ import net.liftweb.mapper.{DriverType}
 /**
  * An int field holding DB related logic
  */
-abstract class DBIntField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends IntField[OwnerType](rec) {
+abstract class DBIntField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends IntField[OwnerType](rec)
+  with JDBCFieldFlavor[Int]{
 
   def targetSQLType = Types.INTEGER
 

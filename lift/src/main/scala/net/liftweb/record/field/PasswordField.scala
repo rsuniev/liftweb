@@ -37,7 +37,7 @@ class PasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
 
   override def set_!(in: String) = hash("{"+in+"} salt={"+salt_i.get+"}")
 
-  override def setFromAny(in: Any): Can[String] = {
+  def setFromAny(in: Any): Can[String] = {
     in match {
       case a : Array[String] if (a.length == 2 && a(0) == a(1)) => Full(this.set(a(0)))
       case l : List[String] if (l.length == 2 && l.head == l(1)) => Full(this.set(l.head))
@@ -48,11 +48,13 @@ class PasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
 
   def setFromString(s: String) : Can[SMyType] = Full(set(s))
 
-  override def toForm = {
-    var el = <input type="pasword"
+  private def elem = <input type="pasword"
       name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
       value={value match {case null => "" case s => s.toString}}
       tabindex={tabIndex toString}/>;
+
+  def toForm = {
+    var el = elem
 
     uniqueFieldId match {
       case Full(id) =>
@@ -63,10 +65,7 @@ class PasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
   }
 
   def asXHtml: NodeSeq = {
-    var el = <input type="password"
-      name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
-      value={value match {case null => "" case s => s.toString}}
-      tabindex={tabIndex toString}/>;
+    var el = elem
 
     uniqueFieldId match {
       case Full(id) =>  el % ("id" -> (id+"_field"))
@@ -82,7 +81,7 @@ class PasswordField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
 
   override def validators = validatePassword _ :: Nil
 
-  override def defaultValue = ""
+  def defaultValue = ""
 }
 
 import java.sql.{ResultSet, Types}
@@ -92,7 +91,7 @@ import net.liftweb.mapper.{DriverType}
  * A password field holding DB related logic
  */
 abstract class DBPasswordField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength: Int) extends
-  PasswordField[OwnerType](rec) with JDBCField[String, OwnerType]{
+  PasswordField[OwnerType](rec) with JDBCFieldFlavor[String]{
 
   def targetSQLType = Types.VARCHAR
 

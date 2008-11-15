@@ -21,12 +21,12 @@ import S._
 
 class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericField[Long, OwnerType] {
 
-  override def owner = rec
+  def owner = rec
 
   /**
    * Sets the field value from an Any
    */
-  override def setFromAny(in: Any): Can[Long] = {
+  def setFromAny(in: Any): Can[Long] = {
     in match {
       case n: Int => Full(this.set(n))
       case n: Number => Full(this.set(n.longValue))
@@ -41,7 +41,7 @@ class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericF
     }
   }
 
-  override def setFromString(s: String) : Can[Long] = {
+  def setFromString(s: String) : Can[Long] = {
     try{
       Full(set(java.lang.Long.parseLong(s)));
     } catch {
@@ -49,18 +49,18 @@ class LongField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericF
     }
   }
 
-  override def defaultValue = 0L
+  def defaultValue = 0L
 
 }
 
 import java.sql.{ResultSet, Types}
 import net.liftweb.mapper.{DriverType}
 
-
 /**
  * An int field holding DB related logic
  */
-abstract class DBLongField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends LongField[OwnerType](rec) {
+abstract class DBLongField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends LongField[OwnerType](rec)
+  with JDBCFieldFlavor[Long]{
 
   def targetSQLType = Types.BIGINT
 

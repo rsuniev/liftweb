@@ -15,16 +15,26 @@ package net.liftweb.record.field
 
 import scala.xml._
 import net.liftweb.util._
-import net.liftweb.http.{S, FieldError}
+import net.liftweb.http.{S, SHtml, FieldError}
+import _root_.java.util.{Locale}
 import S._
 import Helpers._
 
-class TextareaField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int) extends StringField(rec, maxLength) {
 
-  private def elem = <textarea name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
-      rows={textareaRows.toString}
-	  cols={textareaCols.toString}
-      tabindex={tabIndex toString}>{value match {case null => "" case s => s.toString}}</textarea>;
+class LocaleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends StringField(rec, 16) {
+
+  override def defaultValue = Locale.getDefault.toString
+
+  def isAsLocale: Locale = Locale.getAvailableLocales.filter(_.toString == value).toList match {
+    case Nil => Locale.getDefault
+    case x :: xs => x
+  }
+
+  private def elem = SHtml.select(Locale.getAvailableLocales.
+	  toList.sort(_.getDisplayName < _.getDisplayName).
+	  map(lo => (lo.toString, lo.getDisplayName)),
+	  Full(value), set) % ("tabindex" -> tabIndex.toString)
+
 
   override def toForm = {
     var el = elem
@@ -34,7 +44,6 @@ class TextareaField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: I
         <div id={id+"_holder"}><div><label for={id+"_field"}>{displayName}</label></div>{el % ("id" -> (id+"_field"))}<lift:msg id={id}/></div>
       case _ => <div>{el}</div>
     }
-
   }
 
   override def asXHtml: NodeSeq = {
@@ -45,34 +54,22 @@ class TextareaField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: I
       case _ => el
     }
   }
-
-
-  override def toString = {
-    if (value == null || value.length < 100) super.toString
-    else value.substring(0,40) + " ... " + value.substring(value.length - 40)
-  }
-
-  def textareaRows  = 8
-
-  def textareaCols = 20
-
 }
 
 import java.sql.{ResultSet, Types}
 import net.liftweb.mapper.{DriverType}
 
-/**
- * A string field holding DB related logic
- */
-abstract class DBTextareaField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength: Int) extends
-  TextareaField[OwnerType](rec, maxLength) with JDBCFieldFlavor[String]{
+class DBLocaleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends LocaleField(rec)
+  with JDBCFieldFlavor[String] {
 
   def targetSQLType = Types.VARCHAR
 
   /**
    * Given the driver type, return the string required to create the column in the database
    */
-  def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" VARCHAR("+maxLength+")"
+  def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" VARCHAR("+16+")"
 
   def jdbcFriendly(field : String) : String = value
+
 }
+

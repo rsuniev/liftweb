@@ -54,8 +54,8 @@ import net.liftweb.mapper.{DriverType}
 /**
  * An email field holding DB related logic
  */
-abstract class DBEmailField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength: Int) extends
-  EmailField[OwnerType](rec, maxLength) with JDBCField[String, OwnerType]{
+class DBEmailField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength: Int) extends
+  EmailField[OwnerType](rec, maxLength) with JDBCFieldFlavor[String]{
 
   def this(rec: OwnerType, maxLength: Int, value: String) = {
     this(rec, maxLength)

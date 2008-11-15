@@ -16,13 +16,14 @@ package net.liftweb.record.field
 import scala.xml._
 import net.liftweb.util._
 import net.liftweb.http.{S, FieldError}
+import _root_.java.util.regex._
 import S._
 import Helpers._
 
 /**
  * A Field containing String content.
  */
-abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int) extends Field[String, OwnerType] {
+class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLength: Int) extends Field[String, OwnerType] {
 
   def this(rec: OwnerType, maxLength: Int, value: String) = {
     this(rec, maxLength)
@@ -36,7 +37,7 @@ abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLe
 
   def owner = rec
 
-  override def setFromAny(in: Any): Can[String] = {
+  def setFromAny(in: Any): Can[String] = {
     in match {
       case seq: Seq[_] if !seq.isEmpty => seq.map(setFromAny)(0)
       case (s: String) :: _ => Full(set(s))
@@ -51,11 +52,13 @@ abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLe
 
   def setFromString(s: String) : Can[SMyType] = Full(set(s))
 
-  override def toForm = {
-    var el = <input type="text" maxlength={maxLength.toString}
+  private def elem = <input type="text" maxlength={maxLength.toString}
       name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
       value={value match {case null => "" case s => s.toString}}
       tabindex={tabIndex toString}/>;
+
+  def toForm = {
+    var el = elem
 
     uniqueFieldId match {
       case Full(id) =>
@@ -66,10 +69,7 @@ abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLe
   }
 
   def asXHtml: NodeSeq = {
-    var el = <input type="text" maxlength={maxLength.toString}
-      name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
-      value={value match {case null => "" case s => s.toString}}
-      tabindex={tabIndex toString}/>;
+    var el = elem
 
     uniqueFieldId match {
       case Full(id) =>  el % ("id" -> (id+"_field"))
@@ -78,7 +78,31 @@ abstract class StringField[OwnerType <: Record[OwnerType]](rec: OwnerType, maxLe
   }
 
 
-  override def defaultValue = ""
+  def defaultValue = ""
+
+  /**
+   * Make sure the field matches a regular expression
+   */
+  def valRegex(pat: Pattern, msg: => String)(value: String): Can[Node] = pat.matcher(value).matches match {
+    case true => Empty
+    case false => Full(Text(msg))
+  }
+
+  final def toUpper(in: String): String = in match {
+    case null => null
+    case s => s.toUpperCase
+  }
+
+  final def trim(in: String): String = in match {
+    case null => null
+    case s => s.trim
+  }
+
+  final def notNull(in: String): String = in match {
+    case null => ""
+    case s => s
+  }
+
 
 }
 
@@ -89,8 +113,8 @@ import net.liftweb.mapper.{DriverType}
 /**
  * A string field holding DB related logic
  */
-abstract class DBStringField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength: Int) extends
-  StringField[OwnerType](rec, maxLength) with JDBCField[String, OwnerType]{
+class DBStringField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, maxLength: Int) extends
+  StringField[OwnerType](rec, maxLength) with JDBCFieldFlavor[String]{
 
   def this(rec: OwnerType, maxLength: Int, value: String) = {
     this(rec, maxLength)
@@ -110,13 +134,4 @@ abstract class DBStringField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType, m
   def fieldCreatorString(dbType: DriverType, colName: String): String = colName+" VARCHAR("+maxLength+")"
 
   def jdbcFriendly(field : String) : String = value
-}
-
-trait TimeZoneField[OwnerType <: Record[OwnerType]] extends StringField[OwnerType] {
-}
-
-trait CountryField[OwnerType <: Record[OwnerType]] extends StringField[OwnerType] {
-}
-
-trait LocaleField[OwnerType <: Record[OwnerType]] extends StringField[OwnerType] {
 }

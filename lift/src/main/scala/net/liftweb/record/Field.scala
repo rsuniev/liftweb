@@ -102,7 +102,19 @@ trait SimpleField extends FieldLocator {
     data
   }
 
-  protected def set_!(in: SMyType) = in
+  protected def set_!(in: SMyType) = runFilters(in, setFilter)
+
+  /**
+   * A list of functions that transform the value before it is set.  The transformations
+   * are also applied before the value is used in a query.  Typical applications
+   * of this are trimming and/or toLowerCase-ing strings
+   */
+  protected def setFilter: List[SMyType => SMyType] = Nil
+
+  def runFilters(in: SMyType, filter: List[SMyType => SMyType]): SMyType = filter match {
+    case Nil => in
+    case x :: xs => runFilters(x(in), xs)
+  }
 
   def setFromAny(in: Any): Can[SMyType]
 
@@ -176,8 +188,22 @@ trait Field[MyType, OwnerType <: Record[OwnerType]] extends SimpleField with Fie
 
 }
 
-trait JDBCField[MyType, OwnerType <: Record[OwnerType]] extends Field[MyType, OwnerType]{
-   def jdbcFriendly(field : String) : MyType
+import java.sql.{ResultSet, Types}
+import net.liftweb.mapper.{DriverType}
+
+/**
+ * Desribes common aspects related with JDBC
+ */
+trait JDBCFieldFlavor[MyType] {
+
+  def jdbcFriendly(field : String) : MyType
+
+  def targetSQLType : Int
+
+  /**
+   * Given the driver type, return the string required to create the column in the database
+   */
+  def fieldCreatorString(dbType: DriverType, colName: String): String
 }
 
 trait KeyField[MyType, OwnerType <: Record[OwnerType] with KeyedRecord[OwnerType, MyType]] extends Field[MyType, OwnerType] {

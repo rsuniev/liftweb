@@ -107,9 +107,9 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
 
     for (f <- fieldList) {
       (f.name == field.name) match {
-        case true => rec.fieldByName(f.name).map((recField: Field[_, _]) => recField.setFromAny(newValue) )
-        case _ => rec.fieldByName(f.name).map((recField: Field[_, _]) =>
-          original.fieldByName(f.name).map((m: Field[_, _]) => recField.setFromAny(m.value))
+        case true => rec.fieldByName(f.name).map((recField: Field[Any, BaseRecord]) => recField.setFromAny(newValue) )
+        case _ => rec.fieldByName(f.name).map((recField: Field[Any, BaseRecord]) =>
+          original.fieldByName(f.name).map((m: Field[Any, BaseRecord]) => recField.setFromAny(m.value))
         )
       }
     }
@@ -167,7 +167,7 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
    */
   def toForm(inst: BaseRecord): NodeSeq =
     fieldList.flatMap(holder =>
-      inst.fieldByName(holder.name).map((field:Field[_, BaseRecord]) =>
+      inst.fieldByName(holder.name).map((field:Field[Any, BaseRecord]) =>
         field.toForm).openOr(NodeSeq.Empty) ++ Text("\n"))
 
   /**
@@ -179,17 +179,17 @@ trait MetaRecord[BaseRecord <: Record[BaseRecord]] { self: BaseRecord =>
   def toForm(inst: BaseRecord, template: NodeSeq): NodeSeq = {
     template match {
       case e @ <lift:field_label>{_*}</lift:field_label> => e.attribute("name") match{
-        case Some(name) => inst.fieldByName(name.toString).map((field: Field[_, _]) => field.label).openOr(NodeSeq.Empty)
+        case Some(name) => inst.fieldByName(name.toString).map((field: Field[Any, BaseRecord]) => field.label).openOr(NodeSeq.Empty)
         case _ => NodeSeq.Empty
       }
 
       case e @ <lift:field>{_*}</lift:field> => e.attribute("name") match{
-        case Some(name) => inst.fieldByName(name.toString).map((field: Field[_, _]) => field.asXHtml).openOr(NodeSeq.Empty)
+        case Some(name) => inst.fieldByName(name.toString).map((field: Field[Any, BaseRecord]) => field.asXHtml).openOr(NodeSeq.Empty)
         case _ => NodeSeq.Empty
       }
 
       case e @ <lift:field_msg>{_*}</lift:field_msg> => e.attribute("name") match{
-        case Some(name) => inst.fieldByName(name.toString).map((field: Field[_, _]) => field.uniqueFieldId match {
+        case Some(name) => inst.fieldByName(name.toString).map((field: Field[Any, BaseRecord]) => field.uniqueFieldId match {
           case Full(id) => <lift:msg id={id}/>
           case _ => NodeSeq.Empty
         }).openOr(NodeSeq.Empty)

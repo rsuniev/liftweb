@@ -22,7 +22,7 @@ import S._
 
 
 class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Calendar, OwnerType] {
-  override def owner = rec
+  def owner = rec
 
   def this(rec: OwnerType, value: Calendar) = {
     this(rec)
@@ -32,14 +32,14 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
   /**
    * Sets the field value from an Any
    */
-  override def setFromAny(f : Any): Can[Calendar] = toDate(f).map(d => {
+  def setFromAny(f : Any): Can[Calendar] = toDate(f).map(d => {
     val cal = Calendar.getInstance()
     cal.setTime(d)
     this.set(cal)
   })
 
 
-  override def setFromString(s: String) : Can[Calendar] = {
+  def setFromString(s: String) : Can[Calendar] = {
    try{
     val cal = Calendar.getInstance()
     cal.setTime(parseInternetDate(s))
@@ -48,14 +48,15 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
    } catch {
      case e: Exception => Empty
    }
- }
+  }
 
-  override def toForm = {
-    var el = <input type="text"
+  private def elem = <input type="text"
       name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
       value={value match {case null => "" case s: Calendar => toInternetDate(s.getTime)}}
       tabindex={tabIndex toString}/>;
 
+  def toForm = {
+    var el = elem
     uniqueFieldId match {
       case Full(id) =>
         <div id={id+"_holder"}><div><label for={id+"_field"}>{displayName}</label></div>{el % ("id" -> (id+"_field"))}<lift:msg id={id}/></div>
@@ -65,19 +66,14 @@ class DateTimeField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Fiel
   }
 
   def asXHtml: NodeSeq = {
-    var el = <input type="text"
-      name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
-      value={value match {case null => "" case s: Calendar => toInternetDate(s.getTime)}}
-      tabindex={tabIndex toString}/>;
-
+    var el = elem
     uniqueFieldId match {
       case Full(id) =>  el % ("id" -> (id+"_field"))
       case _ => el
     }
   }
 
-
-  override def defaultValue = Calendar.getInstance
+  def defaultValue = Calendar.getInstance
 
 }
 
@@ -87,7 +83,8 @@ import net.liftweb.mapper.{DriverType}
 /**
  * An int field holding DB related logic
  */
-abstract class DBDateTimeField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends DateTimeField[OwnerType](rec) {
+abstract class DBDateTimeField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends DateTimeField[OwnerType](rec)
+  with JDBCFieldFlavor[_root_.java.sql.Date] {
 
   def targetSQLType = Types.TIMESTAMP
 
@@ -96,7 +93,7 @@ abstract class DBDateTimeField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType)
    */
   def fieldCreatorString(dbType: DriverType, colName: String): String = colName + " " + dbType.enumColumnType
 
-  def jdbcFriendly(field : String) : Object = value match {
+  def jdbcFriendly(field : String) = value match {
     case null => null
     case d => new _root_.java.sql.Date(d.getTime.getTime)
   }

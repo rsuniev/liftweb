@@ -20,7 +20,7 @@ import Helpers._
 import S._
 
 class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field[Boolean, OwnerType] {
-  override def owner = rec
+  def owner = rec
 
   def this(rec: OwnerType, value: Boolean) = {
     this(rec)
@@ -30,7 +30,7 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
   /**
    * Sets the field value from an Any
    */
-  override def setFromAny(in: Any): Can[Boolean] = {
+  def setFromAny(in: Any): Can[Boolean] = {
     in match {
       case b: Boolean => Full(this.set(b))
       case (b: Boolean) :: _ => Full(this.set(b))
@@ -44,7 +44,7 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
     }
   }
 
-   override def setFromString(s: String) : Can[Boolean] = {
+  def setFromString(s: String) : Can[Boolean] = {
     try{
       Full(set(java.lang.Boolean.parseBoolean(s)));
     } catch {
@@ -52,12 +52,13 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
     }
   }
 
-  override def toForm = {
-    var el = <input type="checkbox"
+  private def elem = <input type="checkbox"
       name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
       value={value.toString}
       tabindex={tabIndex toString}/>;
 
+  def toForm = {
+    var el = elem
     uniqueFieldId match {
       case Full(id) =>
         <div id={id+"_holder"}><div><label for={id+"_field"}>{displayName}</label></div>{el % ("id" -> (id+"_field"))}<lift:msg id={id}/></div>
@@ -67,11 +68,7 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
   }
 
   def asXHtml: NodeSeq = {
-    var el = <input type="checkbox"
-      name={S.mapFunc(SFuncHolder(this.setFromAny(_)))}
-      value={value.toString}
-      tabindex={tabIndex toString}/>;
-
+    var el = elem
     uniqueFieldId match {
       case Full(id) =>  el % ("id" -> (id+"_field"))
       case _ => el
@@ -79,7 +76,7 @@ class BooleanField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Field
   }
 
 
-  override def defaultValue = false
+  def defaultValue = false
 
 }
 
@@ -89,9 +86,9 @@ import net.liftweb.mapper.{DriverType}
 /**
  * An int field holding DB related logic
  */
-abstract class DBBooleanField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends BooleanField[OwnerType](rec) {
+class DBBooleanField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends BooleanField[OwnerType](rec) with JDBCFieldFlavor[Boolean] {
 
-  def targetSQLType = Types.BOOLEAN
+  def targetSQLType = java.sql.Types.BOOLEAN
 
   /**
    * Given the driver type, return the string required to create the column in the database

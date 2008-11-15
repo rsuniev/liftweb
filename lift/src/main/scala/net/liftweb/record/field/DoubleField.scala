@@ -21,7 +21,7 @@ import S._
 
 class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends NumericField[Double, OwnerType] {
 
-  override def owner = rec
+  def owner = rec
 
   private def toDouble(in: Any): Double = {
     in match {
@@ -41,7 +41,7 @@ class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Numeri
   /**
    * Sets the field value from an Any
    */
-  override def setFromAny(in: Any): Can[Double] = {
+  def setFromAny(in: Any): Can[Double] = {
     in match {
       case n: Double => Full(this.set(n))
       case n: Number => Full(this.set(n.doubleValue))
@@ -55,7 +55,7 @@ class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Numeri
     }
   }
 
-  override def setFromString(s: String) : Can[Double] = {
+  def setFromString(s: String) : Can[Double] = {
     try{
       Full(set(java.lang.Double.parseDouble(s)));
     } catch {
@@ -63,7 +63,7 @@ class DoubleField[OwnerType <: Record[OwnerType]](rec: OwnerType) extends Numeri
     }
   }
 
-  override def defaultValue = 0.0
+  def defaultValue = 0.0
 
 }
 
@@ -73,7 +73,8 @@ import net.liftweb.mapper.{DriverType}
 /**
  * An int field holding DB related logic
  */
-abstract class DBDoubleField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends DoubleField[OwnerType](rec) {
+abstract class DBDoubleField[OwnerType <: DBRecord[OwnerType]](rec: OwnerType) extends DoubleField[OwnerType](rec)
+  with JDBCFieldFlavor[Double]{
 
   def targetSQLType = Types.DOUBLE
 
