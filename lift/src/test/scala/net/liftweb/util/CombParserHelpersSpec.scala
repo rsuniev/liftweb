@@ -22,11 +22,12 @@ import _root_.scala.util.parsing.combinator.Parsers
 import _root_.org.scalacheck._
 import _root_.org.scalacheck.Gen._
 import _root_.org.scalacheck.Prop._
-import _root_.org.specs.Scalacheck
+import _root_.org.scalacheck.Shrink._
+import _root_.org.specs.ScalaCheck
 object ParserHelpers extends net.liftweb.util.CombParserHelpers with Parsers
 
 class CombParserHelpersSpecTest extends Runner(CombParserHelpersSpec) with JUnit with Console
-object CombParserHelpersSpec extends Specification with Scalacheck {
+object CombParserHelpersSpec extends Specification with ScalaCheck {
   import ParserHelpers._
   "The parser helpers" should {
     "provide an isEof function returning true iff a char is end of file" in {
@@ -47,7 +48,7 @@ object CombParserHelpersSpec extends Specification with Scalacheck {
     }
     "provide a whitespace parser: white. Alias: wsc" in {
       import whiteStringGen._
-      val whiteParse = (s: String) => white(s) must beLike { case Success(_, _) => true }
+      val whiteParse = (s: String) => wsc(s) must beLike { case Success(_, _) => true }
       property(whiteParse) must pass
     }
     "provide a whiteSpace parser always succeeding and discarding its result" in {
@@ -60,25 +61,28 @@ object CombParserHelpersSpec extends Specification with Scalacheck {
     }
     "provide an acceptCI parser to parse whatever string matching another string ignoring case" in {
       import abcdStringGen._
-      val ignoreCaseStringParse = (s: String, s2: String) => acceptCI(s).apply(s2) match {
-        case Success(x, y) => s2.toUpperCase must startWith(s.toUpperCase)
-        case _ => true
-      }
+      val ignoreCaseStringParse: Function2[String, String, Boolean] =
+        (s: String, s2: String) => acceptCI(s).apply(s2) match {
+          case Success(x, y) => s2.toUpperCase must startWith(s.toUpperCase)
+          case _ => true
+        }
       property(ignoreCaseStringParse) must pass
     }
     "provide a digit parser - returning a String" in {
-      val isDigit = (s: String) => digit(s) match {
-        case Success(x, y) => s mustMatch("\\d")
-        case _ => true
-      }
+      val isDigit: String => Boolean =
+        (s: String) => digit(s) match {
+          case Success(x, y) => s mustMatch("\\d")
+          case _ => true
+        }
       property(isDigit) must pass
     }
     "provide an aNumber parser - returning an Int if succeeding" in {
-     val number = (s: String) => aNumber(s) match {
-        case Success(0, y) => s.toString must startWith("0")
-        case Success(x, y) => strToLst(s).dropWhile(_ == '0')(0) must_==(x.toString.head)
-        case _ => true
-      }
+      val number: String => Boolean =
+        (s: String) => aNumber(s) match {
+             case Success(0, y) => s.toString must startWith("0")
+             case Success(x, y) => strToLst(s).dropWhile(_ == '0')(0) must_==(x.toString.head)
+             case _ => true
+         }
       property(number) must pass
     }
     "provide a slash parser" in {
@@ -106,8 +110,8 @@ object CombParserHelpersSpec extends Specification with Scalacheck {
     }
     "provide a permute parser succeeding if any permutation of given parsers succeeds" in {
       def permuteParsers(s: String) = shouldSucceed(permute(parserA, parserB, parserC, parserD)(s))
-      import abcdStringGen._
-      property((s: String) => (stringWrapper(s).size == 4) ==> permuteParsers(s)) must pass
+      val permutationOk = (s: String) => permuteParsers(s)
+      abcdStringGen.abcdString must pass(permutationOk)
     }
     "provide a permuteAll parser succeeding if any permutation of the list given parsers, or a sublist of the given parsers succeeds" in {
       def permuteAllParsers(s: String) = shouldSucceed(permuteAll(parserA, parserB, parserC, parserD)(s))
@@ -122,26 +126,27 @@ object CombParserHelpersSpec extends Specification with Scalacheck {
   }
 }
 object abcdStringGen {
-  implicit def abcdString = Arbitrary {
-    for (len <- choose(1, 4);
+  implicit def abcdString = for (len <- choose(4, 4);
          string <- pick(len, List("a", "b", "c", "d"))
          ) yield string.mkString("")
-  }
   def pickN(n: Int, elems: List[String]) = Arbitrary {
     for (string <- pick(n, elems)) yield string.mkString("")
   }
 }
 object whiteStringGen {
-  def genWhiteString: Gen[String] = for (len <- choose(1, 4);
-                                         string <- vectorOf(len, frequency((1, value(" ")), (1, value("\t")), (1, value("\r")), (1, value("\n"))))
-                                    ) yield string.mkString("")
-  implicit def whiteString = Arbitrary(genWhiteString)
+  def genWhite = for (len <- choose(1, 4);
+         string <- vectorOf(len, frequency((1, value(" ")), (1, value("\t")), (1, value("\r")), (1, value("\n"))))
+         ) yield string.mkString("")
+
+  implicit def genWhiteString: Arbitrary[String] = Arbitrary {
+    genWhite
+  }
 }
 object stringWithWhiteGen {
   import whiteStringGen._
   implicit def genString: Arbitrary[String] = Arbitrary {
     for (len <- choose(1, 4);
-         string <- vectorOf(len, frequency((1, value("a")), (2, value("b")), (1, genWhiteString)))
+         string <- vectorOf(len, frequency((1, value("a")), (2, value("b")), (1, genWhite)))
     ) yield string.mkString("")
   }
 }

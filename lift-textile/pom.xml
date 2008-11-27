@@ -7,9 +7,9 @@
     <relativePath>../pom.xml</relativePath>
   </parent>
   <artifactId>lift-textile</artifactId>
-  <packaging>jar</packaging>
+  <!-- <packaging>jar</packaging> -->
   <name>Lift Textile</name>
-  <description>Textile (a wiki syntax) parser : textile to html</description>
+  <description>Textile (a wiki syntax) parser textile to html</description>
   <dependencies>
     <dependency>
       <groupId>org.scala-lang</groupId>
@@ -18,7 +18,7 @@
     <dependency>
       <groupId>org.specs</groupId>
       <artifactId>specs</artifactId>
-      <version>1.2.9</version>
+      <version>1.4.0</version>
       <scope>test</scope>
     </dependency>
     <dependency>

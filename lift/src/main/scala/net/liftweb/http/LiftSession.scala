@@ -317,6 +317,14 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     LiftSession.onShutdownSession.foreach(_(this))
   }
 
+  /**
+   * Find the template assocaited with the Loc
+   */
+  private[http] def locTemplate: Can[NodeSeq] =
+  for (req <- S.request;
+       loc <- req.location;
+       template <- loc.template) yield template
+
   private[http] def processRequest(request: Req): Can[LiftResponse] = {
     S.oldNotices(notices)
     LiftSession.onBeginServicing.foreach(f => tryo(f(this, request)))
@@ -345,7 +353,9 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
         // Process but make sure we're okay, sitemap wise
         val response: Can[LiftResponse] = request.testLocation match {
-          case Left(true) => (findVisibleTemplate(request.path, request).map(xml => processSurroundAndInclude(request.uri+" -> "+request.path, xml)) match {
+          case Left(true) =>
+            ((locTemplate or findVisibleTemplate(request.path, request)).
+             map(xml => processSurroundAndInclude(request.uri+" -> "+request.path, xml)) match {
                 case Full(rawXml: NodeSeq) => {
                     val xml = HeadHelper.mergeToHtmlHead(rawXml)
                     val cometXform: List[RewriteRule] =
@@ -643,8 +653,9 @@ class LiftSession(val contextPath: String, val uniqueId: String,
                                         Null)
     }
 
+    if (ret.isEmpty) ret else
     attrs.get("form").map(ft => (
-        (<form action={S.uri} method={ft.text}>{ret}</form> %
+        (<form action={S.uri} method={ft.text.trim.toLowerCase}>{ret}</form> %
          checkMultiPart(attrs)) %
         checkAttr("class", attrs)) % checkAttr("id",attrs) ) getOrElse ret
 
@@ -756,16 +767,16 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       cls =>
       tryo((e: Throwable) => e match {case e: _root_.java.lang.NoSuchMethodException => ()
           case e => Log.info("Comet find by type Failed to instantiate "+cls.getName, e)}) {
-        val constr = cls.getConstructor(Array())
-        val ret = constr.newInstance(Array()).asInstanceOf[CometActor]
+        val constr = cls.getConstructor()
+        val ret = constr.newInstance().asInstanceOf[CometActor]
         ret.initCometActor(this, name, defaultXml, attributes)
 
         // ret.link(this)
         ret ! PerformSetupComet
         ret.asInstanceOf[CometActor]
       }  or tryo((e: Throwable) => Log.info("Comet find by type Failed to instantiate "+cls.getName, e)) {
-        val constr = cls.getConstructor(Array(this.getClass , classOf[Can[String]], classOf[NodeSeq], classOf[Map[String, String]]))
-        val ret = constr.newInstance(Array(this, name, defaultXml, attributes)).asInstanceOf[CometActor];
+        val constr = cls.getConstructor(this.getClass , classOf[Can[String]], classOf[NodeSeq], classOf[Map[String, String]])
+        val ret = constr.newInstance(this, name, defaultXml, attributes).asInstanceOf[CometActor];
         ret.start
         // ret.link(this)
         ret ! PerformSetupComet
@@ -847,9 +858,10 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       case e: Elem if e.label == "head" && !done =>
         done = true
         Elem(null, "head", e.attributes,  e.scope, (e.child ++
-                                                    <script src={"/"+
-                                                                 LiftRules.ajaxPath +
-                                                                 "/" + LiftRules.ajaxScriptName()}
+                                                    <script
+              src={S.encodeURL("/"+
+                   LiftRules.ajaxPath +
+                   "/" + LiftRules.ajaxScriptName())}
               type="text/javascript"/>) :_*)
       case n => n
     }
@@ -862,11 +874,14 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     override def transform(n: Node) = n match {
       case e: Elem if e.label == "head" && !doneHead =>
         doneHead = true
-        Elem(null, "head", e.attributes,  e.scope, (e.child ++
-                                                    <script src={"/"+
-                                                                 LiftRules.cometPath +
-                                                                 "/" + uniqueId +
-                                                                 "/" + LiftRules.cometScriptName()}
+        Elem(null, "head",
+             e.attributes,
+             e.scope,
+             (e.child ++
+              <script src={S.encodeURL("/"+
+                           LiftRules.cometPath +
+                           "/" + uniqueId +
+                           "/" + LiftRules.cometScriptName())}
               type="text/javascript"/>) :_*)
 
       case e: Elem if e.label == "body" && !doneBody =>
@@ -954,7 +969,7 @@ object TemplateFinder {
         tryo(List(classOf[ClassNotFoundException]), Empty) (Class.forName(clsName).asInstanceOf[Class[AnyRef]]).flatMap{
           c =>
           (c.newInstance match {
-              case inst: InsecureLiftView => c.getMethod(action, null).invoke(inst, null)
+              case inst: InsecureLiftView => c.getMethod(action).invoke(inst)
               case inst: LiftView if inst.dispatch.isDefinedAt(action) => inst.dispatch(action)()
               case _ => Empty
             }) match {

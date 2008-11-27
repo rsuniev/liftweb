@@ -305,12 +305,12 @@ object LiftRules {
   val (hasContinuations_?, contSupport, getContinuation, getObject, setObject, suspend, resume) = {
     try {
       val cc = Class.forName("org.mortbay.util.ajax.ContinuationSupport")
-      val meth = cc.getMethod("getContinuation", Array(classOf[HttpServletRequest], classOf[AnyRef]))
+      val meth = cc.getMethod("getContinuation", classOf[HttpServletRequest], classOf[AnyRef])
       val cci = Class.forName("org.mortbay.util.ajax.Continuation")
-      val getObj = cci.getMethod("getObject", null)
-      val setObj = cci.getMethod("setObject", Array(classOf[AnyRef]))
-      val suspend = cci.getMethod("suspend", Array(_root_.java.lang.Long.TYPE))
-      val resume = cci.getMethod("resume", null)
+      val getObj = cci.getMethod("getObject")
+      val setObj = cci.getMethod("setObject", classOf[AnyRef])
+      val suspend = cci.getMethod("suspend", _root_.java.lang.Long.TYPE)
+      val resume = cci.getMethod("resume")
       (true, (cc), (meth), (getObj), (setObj), (suspend), resume)
     } catch {
       case e => (false, null, null, null, null, null, null)
@@ -318,16 +318,16 @@ object LiftRules {
   }
 
   def resumeRequest(what: AnyRef, req: HttpServletRequest) {
-    val cont = getContinuation.invoke(contSupport, Array(req, LiftRules))
-    setObject.invoke(cont, Array(what))
-    resume.invoke(cont, null)
+    val cont = getContinuation.invoke(contSupport, req, LiftRules)
+    setObject.invoke(cont, what)
+    resume.invoke(cont)
   }
 
   def doContinuation(req: HttpServletRequest, timeout: Long): Nothing = {
     try {
-      val cont = getContinuation.invoke(contSupport, Array(req, LiftRules))
+      val cont = getContinuation.invoke(contSupport, req, LiftRules)
       Log.trace("About to suspend continuation")
-      suspend.invoke(cont, Array(new _root_.java.lang.Long(timeout)))
+      suspend.invoke(cont, new _root_.java.lang.Long(timeout))
       throw new Exception("Bail")
     } catch {
       case e: _root_.java.lang.reflect.InvocationTargetException if e.getCause.getClass.getName.endsWith("RetryRequest") =>
@@ -338,9 +338,9 @@ object LiftRules {
   def checkContinuations(req: HttpServletRequest): Option[Any] = {
     if (!hasContinuations_?) None
     else {
-      val cont = getContinuation.invoke(contSupport, Array(req, LiftRules))
-      val ret = getObject.invoke(cont, null)
-      setObject.invoke(cont, Array(null))
+      val cont = getContinuation.invoke(contSupport, req, LiftRules)
+      val ret = getObject.invoke(cont)
+      setObject.invoke(cont, null)
       Some(ret)
     }
   }

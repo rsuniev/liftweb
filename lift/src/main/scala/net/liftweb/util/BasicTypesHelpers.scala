@@ -72,9 +72,9 @@ trait BasicTypesHelpers { self: StringHelpers with ControlHelpers =>
   def toBoolean(in: Any): Boolean = {
     in match {
       case null => false
-      case b : boolean => b
-      case i: int => i != 0
-      case lo: long => lo != 0
+      case b : Boolean => b
+      case i: Int => i != 0
+      case lo: Long => lo != 0
       case n : Number => n.intValue != 0
       case s : String => {
         val sl = s.toLowerCase
@@ -142,7 +142,7 @@ def asLong(in: String): Can[Long] = tryo(in.toLong)
    * Convert any InputStream to a ByteArrayInputStream
    */
   def toByteArrayInputStream(in: InputStream) = {
-    val ba = new Array[byte](4096)
+    val ba = new Array[Byte](4096)
     val bos = new ByteArrayOutputStream
     var len = 0
     while (len >= 0) {

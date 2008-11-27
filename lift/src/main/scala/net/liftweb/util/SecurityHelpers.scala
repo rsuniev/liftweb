@@ -109,7 +109,7 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
   def md5(in: String): String = new String((new Base64) encode md5(in.getBytes("UTF-8")))
 
   /** create a SHA hash from a Byte array */
-  def hash(in : Array[Byte]) : Array[byte] = {
+  def hash(in : Array[Byte]) : Array[Byte] = {
     (MessageDigest.getInstance("SHA")).digest(in)
   }
 
@@ -119,7 +119,7 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
   }
 
   /** create a SHA-256 hash from a Byte array */
-  def hash256(in : Array[Byte]) : Array[byte] = {
+  def hash256(in : Array[Byte]) : Array[Byte] = {
     (MessageDigest.getInstance("SHA-256")).digest(in)
   }
 
@@ -144,13 +144,13 @@ trait SecurityHelpers { self: StringHelpers with IoHelpers =>
   def hexEncode(in: Array[Byte]): String = {
     val sb = new StringBuilder
     val len = in.length
-    def addDigit(in: Array[byte], pos: int, len: int, sb: StringBuilder) {
+    def addDigit(in: Array[Byte], pos: Int, len: Int, sb: StringBuilder) {
       if (pos < len) {
-        val b: int = in(pos)
+        val b: Int = in(pos)
         val msb = (b & 0xf0) >> 4
         val lsb = (b & 0x0f)
-        sb.append((if (msb < 10) ('0' + msb).asInstanceOf[char] else ('a' + (msb - 10)).asInstanceOf[char]))
-        sb.append((if (lsb < 10) ('0' + lsb).asInstanceOf[char] else ('a' + (lsb - 10)).asInstanceOf[char]))
+        sb.append((if (msb < 10) ('0' + msb).asInstanceOf[Char] else ('a' + (msb - 10)).asInstanceOf[Char]))
+        sb.append((if (lsb < 10) ('0' + lsb).asInstanceOf[Char] else ('a' + (lsb - 10)).asInstanceOf[Char]))
 
         addDigit(in, pos + 1, len, sb)
       }

@@ -201,7 +201,7 @@ trait ClassHelpers { self: ControlHelpers =>
     tryo {
       clz match {
         case null => false
-        case _ => callableMethod_?(clz.getDeclaredMethod(name, null))
+        case _ => callableMethod_?(clz.getDeclaredMethod(name))
       }
     } openOr false
   }
@@ -216,7 +216,7 @@ trait ClassHelpers { self: ControlHelpers =>
    */
   def invokeControllerMethod(clz: Class[_], meth: String) = {
     try {
-      clz.getMethod(meth, null).invoke(clz.newInstance, null)
+      clz.getMethod(meth).invoke(clz.newInstance)
     } catch {
       case c : InvocationTargetException => {
         def findRoot(e : Throwable) { if (e.getCause == null || e.getCause == e) throw e else findRoot(e.getCause) }
@@ -300,7 +300,8 @@ trait ClassHelpers { self: ControlHelpers =>
                                             m.getParameterTypes.length == params.length)
 
       try {
-        List(clz.getMethod(meth, ptypes openOr params.map(_.getClass)))
+        val classes: Array[(Class[CL] forSome {type CL})] = ptypes openOr params.map(_.getClass)
+        List(clz.getMethod(meth, classes : _*))
       } catch {
         case e: NullPointerException => Nil
         case e: NoSuchMethodException => alternateMethods
@@ -316,7 +317,7 @@ trait ClassHelpers { self: ControlHelpers =>
       }
     }
     possibleMethods.elements.filter(m => inst != null || isStatic(m.getModifiers)).
-                                   map((m: Method) => tryo{m.invoke(inst, params)}).
+                                   map((m: Method) => tryo{m.invoke(inst, params : _*)}).
                                    find((x: Can[Any]) => x match {
                                             case result@Full(_) => true
                                             case Failure(_, Full(c: IllegalAccessException), _) => false
@@ -324,7 +325,7 @@ trait ClassHelpers { self: ControlHelpers =>
                                             case Failure(_, Full(c), _) => if (c.getCause != null) throw c.getCause else throw c
                                    }) match {
                                             case Some(result@Full(_)) => result
-                                            case None => Failure("invokeMethod " + meth, Empty, Nil)
+                                            case None => Failure("invokeMethod " + meth, Empty, Empty)
                                    }
   }
 
@@ -355,7 +356,7 @@ trait ClassHelpers { self: ControlHelpers =>
             case Nil => Empty
             case x :: xs => Full(() => {
               try {
-                Full(x.invoke(instance, null))
+                Full(x.invoke(instance))
               } catch {
                 case e : InvocationTargetException => throw e.getCause
               }

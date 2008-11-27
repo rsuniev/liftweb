@@ -59,7 +59,7 @@ object WikiStuff extends Loc[WikiLoc] {
   def defaultParams = Full(WikiLoc("HomePage", false))
 
   // no extra parameters
-  def stuff = Nil
+  def params = Nil
 
   // is the current page an "edit" or "view"
   def currentEdit = foundParam.is.map(_.edit) openOr false
@@ -145,7 +145,7 @@ object WikiStuff extends Loc[WikiLoc] {
 
     val submitButton = SHtml.submit(isNew ? "Add" | "Edit", () => r.save)
 
-    <form method="POST" action={action}>{ // the form tag
+    <form method="post" action={action}>{ // the form tag
       message ++
       hobixLink ++
       textarea ++ // display the form

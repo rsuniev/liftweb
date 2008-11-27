@@ -6,10 +6,10 @@ import _root_.org.scalacheck.Arbitrary
 import _root_.org.scalacheck.{Prop, Gen}
 import _root_.org.scalacheck.Gen._
 import _root_.org.scalacheck.Prop.{property}
-import _root_.org.specs.Scalacheck
+import _root_.org.specs.ScalaCheck
 
 class ClassHelpersSpecTest extends Runner(ClassHelpersSpec) with JUnit
-object ClassHelpersSpec extends Specification with ClassHelpers with ControlHelpers with StringGenerators with Scalacheck {
+object ClassHelpersSpec extends Specification with ClassHelpers with ControlHelpers with StringGenerators with ScalaCheck {
   "the findClass function" should {
     "return a Full can with the found class when given the name and package" in {
       findClass("ClassHelpersSpecTest", List("net.liftweb.util")) must_== Full(classOf[ClassHelpersSpecTest])
@@ -41,15 +41,15 @@ object ClassHelpersSpec extends Specification with ClassHelpers with ControlHelp
   }
   "The callableMethod_? function" should {
     "return true if the method is public and has no parameters" in {
-      val publicParameterLess = classOf[String].getMethod("length", null)
+      val publicParameterLess = classOf[String].getMethod("length")
       callableMethod_?(publicParameterLess) must beTrue
     }
     "return false if the method is public and has parameters" in {
-      val publicWithParameters = classOf[String].getMethod("indexOf", Array(classOf[String]))
+      val publicWithParameters = classOf[String].getMethod("indexOf", classOf[String])
       callableMethod_?(publicWithParameters) must beFalse
     }
     "return false if the method is private" in {
-      val privateMethod = classOf[_root_.java.util.ArrayList[Object]].getDeclaredMethod("readObject", Array(classOf[_root_.java.io.ObjectInputStream]))
+      val privateMethod = classOf[_root_.java.util.ArrayList[Object]].getDeclaredMethod("readObject", classOf[_root_.java.io.ObjectInputStream])
       callableMethod_?(privateMethod) must beFalse
     }
     "return false if the method is null" in {
@@ -126,10 +126,10 @@ object ClassHelpersSpec extends Specification with ClassHelpers with ControlHelp
       invokeControllerMethod(classOf[String], "length") must_== 0
     }
     "throw an exception when the method is not callable" in {
-      invokeControllerMethod(classOf[String], "isNotEmpty") must throwA(new NoSuchMethodException(""))
+      invokeControllerMethod(classOf[String], "isNotEmpty") must throwA[NoSuchMethodException]
     }
     "throw an exception if the class is null" in {
-      invokeControllerMethod(null, "length") must throwA(new NullPointerException)
+      invokeControllerMethod(null, "length") must throwA[NullPointerException]
     }
   }
   "The invokeMethod function" should {
@@ -155,7 +155,7 @@ object ClassHelpersSpec extends Specification with ClassHelpers with ControlHelp
       class SpecificException extends Exception
       class TestSnippet { def throwException = throw new SpecificException  }
       val testSnippet = new TestSnippet
-      invokeMethod(testSnippet.getClass, testSnippet, "throwException") must throwA(new SpecificException)
+      invokeMethod(testSnippet.getClass, testSnippet, "throwException") must throwA[SpecificException]
     }
   }
   "The invokeMethod function" can {
@@ -182,7 +182,7 @@ object ClassHelpersSpec extends Specification with ClassHelpers with ControlHelp
       createInvoker("length", "").open_!.apply().get must_== 0
     }
     "The invoker function will throw the cause exception if the method can't be called" in {
-      createInvoker("get", "").open_!.apply must throwA(new Exception)
+      createInvoker("get", "").open_!.apply must throwA[Exception]
     }
   }
 }

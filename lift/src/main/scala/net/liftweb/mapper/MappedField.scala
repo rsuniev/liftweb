@@ -129,6 +129,8 @@ trait BaseMappedField extends SelectableField {
 
   def displayNameHtml: Can[NodeSeq] = Empty
 
+  def displayHtml: NodeSeq = displayNameHtml openOr Text(displayName)
+
   /**
    * This is where the instance creates its "toForm" stuff.
    * The actual toForm method wraps the information based on
@@ -191,25 +193,31 @@ trait MappedForeignKey[KeyType, MyOwner <: Mapper[MyOwner], Other <: KeyedMapper
 
 trait BaseOwnedMappedField[OwnerType <: Mapper[OwnerType]] extends BaseMappedField
 
-/**
-  * The strongly typed field that's mapped to a column (or many columns) in the database.
-  * FieldType is the type of the field and OwnerType is the Owner of the field
-  */
-trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends BaseOwnedMappedField[OwnerType] with FieldIdentifier {
-  /**
-    * Should the field be ignored by the OR Mapper?
-    */
-  def ignoreField_? = false
-
+trait TypedField[FieldType] {
   /**
     * The default value for the field
     */
   def defaultValue: FieldType
 
+
   /**
     * What is the real class that corresponds to FieldType
     */
   def dbFieldClass: Class[FieldType]
+}
+
+
+/**
+  * The strongly typed field that's mapped to a column (or many columns) in the database.
+  * FieldType is the type of the field and OwnerType is the Owner of the field
+  */
+trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends TypedField[FieldType] with BaseOwnedMappedField[OwnerType] with FieldIdentifier {
+  /**
+    * Should the field be ignored by the OR Mapper?
+    */
+  def ignoreField_? = false
+
+
 
   /**
     * Get the field that this prototypical field represents
@@ -246,12 +254,12 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends BaseO
   /**
    * Called when a column has been added to the database via Schemifier
    */
-  def dbAddedColumn: Can[() => unit] = Empty
+  def dbAddedColumn: Can[() => Unit] = Empty
 
   /**
    * Called when a column has indexed via Schemifier
    */
-  def dbAddedIndex: Can[() => unit] = Empty
+  def dbAddedIndex: Can[() => Unit] = Empty
 
   /**
    * override this method in indexed fields to indicate that the field has been saved
@@ -413,7 +421,7 @@ trait MappedField[FieldType <: Any,OwnerType <: Mapper[OwnerType]] extends BaseO
   def buildSetStringValue(accessor: Method, columnName: String): (OwnerType, String) => Unit
   def buildSetDateValue(accessor: Method, columnName: String): (OwnerType, Date) => Unit
   def buildSetBooleanValue(accessor: Method, columnName: String) : (OwnerType, Boolean, Boolean) => Unit
-  protected def getField(inst: OwnerType, meth: Method) = meth.invoke(inst, null).asInstanceOf[MappedField[FieldType,OwnerType]];
+  protected def getField(inst: OwnerType, meth: Method) = meth.invoke(inst).asInstanceOf[MappedField[FieldType,OwnerType]];
   protected def doField(inst: OwnerType, meth: Method, func: PartialFunction[MappedField[FieldType, OwnerType], Unit]) {
     val f = getField(inst, meth)
     if (func.isDefinedAt(f)) func(f)

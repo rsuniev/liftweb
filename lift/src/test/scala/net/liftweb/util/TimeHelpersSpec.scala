@@ -8,10 +8,10 @@ import _root_.org.scalacheck.Prop._
 import _root_.org.scalacheck.Arbitrary
 import _root_.org.specs.Products._
 import _root_.org.specs.mock.Mocker
-import _root_.org.specs.Scalacheck
+import _root_.org.specs.ScalaCheck
 
-class TimeHelpersTest extends Runner(TimeHelpersSpec) with JUnit with Console with ScalaTest
-object TimeHelpersSpec extends Specification with TimeHelpers with TimeAmountsGen with Mocker with LoggerDelegation with ControlHelpers with ClassHelpers {
+class TimeHelpersTest extends JUnit4(TimeHelpersSpec)
+object TimeHelpersSpec extends Specification with TimeHelpers with TimeAmountsGen with ScalaCheck with Mocker with LoggerDelegation with ControlHelpers with ClassHelpers {
   "A TimeSpan" can {
     "be created from a number of milliseconds" in {
       TimeSpan(3000) must_== TimeSpan(3 * 1000)
@@ -166,7 +166,7 @@ object TimeHelpersSpec extends Specification with TimeHelpers with TimeAmountsGe
     }
     "provide a toDate returning a Full(date) from many kinds of objects" in {
       val d = now
-      (null, Nil, None, Failure("", Empty, Nil)).toList forall { toDate(_) must_== Empty }
+      (null, Nil, None, Failure("", Empty, Empty)).toList forall { toDate(_) must_== Empty }
       (Full(d), Some(d), d :: d).toList forall { toDate(_) must_== Full(d) }
       toDate(internetDateFormatter.format(d)).get.getTime.toLong must beCloseTo(d.getTime.toLong, 1000L)
     }
@@ -189,7 +189,7 @@ object TimeHelpersSpec extends Specification with TimeHelpers with TimeAmountsGe
     }
   }
 }
-trait TimeAmountsGen extends Scalacheck { self: TimeHelpers =>
+trait TimeAmountsGen { self: TimeHelpers =>
   type TimeAmounts = Tuple2[String, Tuple6[(Int, String), (Int, String), (Int, String), (Int, String), (Int, String), (Int, String)]]
   val timeAmounts = for {
       w <- choose(0, 2)

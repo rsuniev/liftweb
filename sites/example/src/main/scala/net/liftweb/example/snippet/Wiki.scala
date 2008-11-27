@@ -25,9 +25,11 @@ import _root_.net.liftweb.util.Helpers._
 import _root_.net.liftweb.textile._
 
 // show determines which one is used. bind hooks the content into the lift view
-case class BindChoice(show: boolean, bind: () => NodeSeq)
+case class BindChoice(show: Boolean, bind: () => NodeSeq)
 
-class Wiki extends MetaWikiEntry {
+class Wiki {
+  import WikiEntry._
+
   def uriFor(path:String) = "/wiki/" + path
 
   /**
@@ -92,7 +94,7 @@ class Wiki extends MetaWikiEntry {
     }
   }
 
-  private def editEntry(entry: WikiEntry, isNew: boolean, pageName: String) = {
+  private def editEntry(entry: WikiEntry, isNew: Boolean, pageName: String) = {
     val action = uriFor(pageName)
     val message = if (isNew) Text("Create Entry named "+pageName) else Text("Edit entry named "+pageName)
     val hobixLink = <span>&nbsp;<a href="http://hobix.com/textile/quick.html" target="_blank">Textile Markup Reference</a><br /></span>

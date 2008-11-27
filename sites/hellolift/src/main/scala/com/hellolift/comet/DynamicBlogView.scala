@@ -15,7 +15,7 @@ class DynamicBlogView extends CometActor {
   def defaultPrefix = "blog"
   var blogtitle = ""
   var blog : List[Entry] = Nil
-  var blogid : long = 0L
+  var blogid : Long = 0L
 
   def _entryview(e : Entry) : Node = {
     <div>

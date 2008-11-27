@@ -31,16 +31,16 @@ trait TimeHelpers { self: ControlHelpers =>
   private val outer = this
 
   /** transforms a long to a TimeSpanBuilder object. Usage: 3L.seconds returns a TimeSpan of 3000L millis  */
-  implicit def longToTimeSpanBuilder(in: long): TimeSpanBuilder = TimeSpanBuilder(in)
+  implicit def longToTimeSpanBuilder(in: Long): TimeSpanBuilder = TimeSpanBuilder(in)
 
   /** transforms an int to a TimeSpanBuilder object. Usage: 3.seconds returns a TimeSpan of 3000L millis  */
-  implicit def intToTimeSpanBuilder(in: int): TimeSpanBuilder = TimeSpanBuilder(in)
+  implicit def intToTimeSpanBuilder(in: Int): TimeSpanBuilder = TimeSpanBuilder(in)
 
   /** transforms a long to a TimeSpan object. Usage: 3000L returns a TimeSpan of 3000L millis  */
-  implicit def longToTimeSpan(in: long): TimeSpan = TimeSpan(in)
+  implicit def longToTimeSpan(in: Long): TimeSpan = TimeSpan(in)
 
   /** transforms an int to a TimeSpan object. Usage: 3000 returns a TimeSpan of 3000L millis  */
-  implicit def intToTimeSpan(in: int): TimeSpan = TimeSpan(in)
+  implicit def intToTimeSpan(in: Int): TimeSpan = TimeSpan(in)
 
   /** class building TimeSpans given an amount (len) and a method specify the time unit  */
   case class TimeSpanBuilder(val len: Long) {
@@ -63,7 +63,7 @@ trait TimeHelpers { self: ControlHelpers =>
   implicit def timeSpanToDate(in: TimeSpan): Date = in.date
 
   /** transforms a TimeSpan to its long value as millis */
-  implicit def timeSpanToLong(in: TimeSpan): long = in.millis
+  implicit def timeSpanToLong(in: TimeSpan): Long = in.millis
 
   /**
    * The TimeSpan class represents an amount of time.
@@ -89,8 +89,8 @@ trait TimeHelpers { self: ControlHelpers =>
     /** override the equals method so that TimeSpans can be compared to long, int and TimeSpan */
     override def equals(cmp: Any) = {
       cmp match {
-        case lo: long => lo == this.millis
-        case i: int => i == this.millis
+        case lo: Long => lo == this.millis
+        case i: Int => i == this.millis
         case ti: TimeSpan => ti.millis == this.millis
         case _ => false
       }
@@ -110,7 +110,7 @@ trait TimeHelpers { self: ControlHelpers =>
     val scales = List((1000L, "milli"), (60L, "second"), (60L, "minute"), (24L, "hour"), (7L, "day"), (10000L, "week"))
 
     /** explicit constructor for a TimeSpan  */
-    def apply(in: long) = new TimeSpan(in)
+    def apply(in: Long) = new TimeSpan(in)
 
     /**
      * Formats a number of millis to a string representing the number of weeks, days, hours, minutes, seconds, millis
@@ -131,19 +131,19 @@ trait TimeHelpers { self: ControlHelpers =>
   def millis = System.currentTimeMillis
 
   /** @return the number of millis corresponding to 'in' seconds */
-  def seconds(in: long): long = in * 1000L
+  def seconds(in: Long): Long = in * 1000L
 
   /** @return the number of millis corresponding to 'in' minutes */
-  def minutes(in: long): long = seconds(in) * 60L
+  def minutes(in: Long): Long = seconds(in) * 60L
 
   /** @return the number of millis corresponding to 'in' hours */
-  def hours(in: long): long = minutes(in) * 60L
+  def hours(in: Long): Long = minutes(in) * 60L
 
   /** @return the number of millis corresponding to 'in' days */
-  def days(in: long): long = hours(in) * 24L
+  def days(in: Long): Long = hours(in) * 24L
 
   /** @return the number of millis corresponding to 'in' weeks */
-  def weeks(in: long): long = days(in) * 7L
+  def weeks(in: Long): Long = days(in) * 7L
 
   /** implicit def used to add the noTime method to the Date class */
   implicit def toDateExtension(d: Date) = new DateExtension(d)
@@ -204,7 +204,7 @@ trait TimeHelpers { self: ControlHelpers =>
   def dayNow: Date = 0.seconds.later.noTime
 
   /** alias for new Date(millis) */
-  def time(when: long) = new Date(when)
+  def time(when: Long) = new Date(when)
 
   /** @return the month corresponding to today (0 based, relative to UTC) */
   def month(in: Date): Int = {
@@ -309,7 +309,7 @@ trait TimeHelpers { self: ControlHelpers =>
         case o => toDate(o.toString)
       }
     } catch {
-      case e => Log.debug("Error parsing date "+in, e); Failure("Bad date: "+in, Full(e), Nil)
+      case e => Log.debug("Error parsing date "+in, e); Failure("Bad date: "+in, Full(e), Empty)
     }
   }
 }

@@ -26,6 +26,8 @@ import _root_.net.liftweb.widgets.tree.TreeView
 
 import _root_.net.liftweb.widgets.sparklines.Sparklines
 
+import net.liftweb.widgets.sparklines.Sparklines
+
 /**
   * A class that's instantiated early and run.  It allows the application
   * to modify lift's environment

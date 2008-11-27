@@ -21,7 +21,7 @@ import _root_.net.liftweb.http.S
 import _root_.net.liftweb.http.S._
 import _root_.net.liftweb.util._
 
-class MappedTextarea[T<:Mapper[T]](owner : T, maxLen: int) extends MappedString[T](owner, maxLen) {
+class MappedTextarea[T<:Mapper[T]](owner : T, maxLen: Int) extends MappedString[T](owner, maxLen) {
   /**
    * Create an input field for the item
    */
