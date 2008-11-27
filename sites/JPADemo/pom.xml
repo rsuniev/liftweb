@@ -81,6 +81,24 @@
 	</exclusion>
       </exclusions>
     </dependency>
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate</artifactId>
+      <version>3.2.6.ga</version>
+      <exclusions>
+	<exclusion>
+	  <groupId>javax.transaction</groupId>
+	  <artifactId>jta</artifactId>
+	</exclusion>
+      </exclusions>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.hibernate</groupId>
+      <artifactId>hibernate-annotations</artifactId>
+      <version>3.4.0.GA</version>
+      <scope>provided</scope>
+    </dependency>
   </dependencies>
 
 </project>

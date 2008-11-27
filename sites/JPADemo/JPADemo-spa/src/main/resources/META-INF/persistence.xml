@@ -3,7 +3,7 @@
    xsi:schemaLocation="http://java.sun.com/xml/ns/persistence http://java.sun.com/xml/ns/persistence/persistence_1_0.xsd"
    version="1.0">
   <persistence-unit name="jpaweb" transaction-type="JTA">
-    <jta-data-source>java:comp/env/jdbc/jpaDS</jta-data-source>
+    <jta-data-source>jpaDS</jta-data-source>
       <properties>
          <property name="hibernate.dialect" value="org.hibernate.dialect.DerbyDialect"/>
          <property name="hibernate.max_fetch_depth" value="3"/>

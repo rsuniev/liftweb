@@ -24,7 +24,7 @@ PUBLIC "-//Sun Microsystems, Inc.//DTD Web Application 2.3//EN"
   </persistence-context-ref>
   -->
   <resource-ref>
-    <res-ref-name>jpaweb</res-ref-name>
+    <res-ref-name>persistence/jpaweb</res-ref-name>
     <res-type>javax.persistence.EntityManager</res-type>
   </resource-ref>
 </filter>
