@@ -22,7 +22,7 @@ import _root_.scala.xml.{NodeSeq, Elem, Text, UnprefixedAttribute, Null, MetaDat
                          PrefixedAttribute,
                          Group, Node, HasKeyValue}
 import _root_.scala.collection.immutable.{ListMap, TreeMap}
-import _root_.net.liftweb.util.{Helpers, ThreadGlobal, LoanWrapper, Can, Empty, Full, Failure, Log, JSONParser}
+import _root_.net.liftweb.util.{Helpers, ThreadGlobal, LoanWrapper, Can, Empty, Full, Failure, Log, JSONParser, NamedPartialFunction, NamedPF}
 import Helpers._
 import js._
 import _root_.java.io.InputStream
@@ -41,9 +41,9 @@ object S extends HasParams {
   /**
    * Holds the partial function that re-write an incoming request
    */
-  case class RewriteHolder(name: String, rewrite: LiftRules.RewritePf)
-  case class DispatchHolder(name: String, dispatch: LiftRules.DispatchPf)
-  case class TemplateHolder(name: String, template: LiftRules.TemplatePf)
+  case class RewriteHolder(name: String, rewrite: LiftRules.RewritePF)
+  case class DispatchHolder(name: String, dispatch: LiftRules.DispatchPF)
+  case class TemplateHolder(name: String, template: LiftRules.TemplatePF)
 
   /**
    * Holds information about cookies
@@ -84,6 +84,11 @@ object S extends HasParams {
   private object postFuncs extends RequestVar(new ListBuffer[() => Unit])
   private object p_queryLog extends RequestVar(new ListBuffer[(String, Long)])
   private object p_notice extends RequestVar(new ListBuffer[(NoticeType.Value, NodeSeq, Can[String])])
+
+  /**
+   * Are we in the Scope of "S"
+   */
+  def inStatefulScope_? : Boolean = inS.value
 
   /**
    * Get the current Req
@@ -170,20 +175,22 @@ object S extends HasParams {
   def timeZone: TimeZone =
   LiftRules.timeZoneCalculator(request.map(_.request))
 
-  private def reduxio(in: List[LiftRules.DispatchPf]): LiftRules.DispatchPf = in match {
-    case Nil => Map.empty
-    case x :: Nil => x
-    case x :: xs => x orElse reduxio(xs)
-  }
+  /*
+   private def reduxio(in: List[LiftRules.DispatchPF]): LiftRules.DispatchPF = in match {
+   case Nil => Map.empty
+   case x :: Nil => x
+   case x :: xs => x orElse reduxio(xs)
+   }
+   */
 
-  def highLevelSessionDispatcher: LiftRules.DispatchPf = reduxio(highLevelSessionDispatchList.map(_.dispatch))
+  def highLevelSessionDispatcher: List[LiftRules.DispatchPF] = highLevelSessionDispatchList.map(_.dispatch)
   /**
    * Return the list of DispatchHolders set for this session.
    */
   def highLevelSessionDispatchList: List[DispatchHolder] =
   session map (_.highLevelSessionDispatcher.toList.map(t => DispatchHolder(t._1, t._2))) openOr Nil
 
-  def addHighLevelSessionDispatcher(name: String, disp: LiftRules.DispatchPf) =
+  def addHighLevelSessionDispatcher(name: String, disp: LiftRules.DispatchPF) =
   session map (_.highLevelSessionDispatcher += (name -> disp))
 
   def removeHighLevelSessionDispatcher(name: String) =
@@ -198,7 +205,7 @@ object S extends HasParams {
   def sessionTemplater: List[TemplateHolder] =
   session map (_.sessionTemplater.toList.map(t => TemplateHolder(t._1, t._2))) openOr Nil
 
-  def addSessionTemplater(name: String, rw: LiftRules.TemplatePf) =
+  def addSessionTemplater(name: String, rw: LiftRules.TemplatePF) =
   session map (_.sessionTemplater += (name -> rw))
 
   def removeSessionTemplater(name: String) =
@@ -210,7 +217,7 @@ object S extends HasParams {
   def sessionRewriter: List[RewriteHolder] =
   session map (_.sessionRewriter.toList.map(t => RewriteHolder(t._1, t._2))) openOr Nil
 
-  def addSessionRewriter(name: String, rw: LiftRules.RewritePf) =
+  def addSessionRewriter(name: String, rw: LiftRules.RewritePF) =
   session map (_.sessionRewriter += (name -> rw))
 
   def removeSessionRewriter(name: String) =
@@ -579,6 +586,14 @@ object S extends HasParams {
         case (Left(v), _) if v == what => true
         case _ => false
       }).map(_._2)
+
+    def apply(what: String, default: => String): String =
+    apply(what) openOr default
+
+    def apply[T](what: String, f: String => T,
+                 default: => T): T =
+    apply(what).map(f) openOr default
+    
   }
 
   /**
@@ -601,7 +616,7 @@ object S extends HasParams {
   /**
    * Returns the LiftSession parameter denominated by 'what'
    */
-  def get(what: String): Can[String] = session.flatMap(_.get(what, classOf[String]))
+  def get(what: String): Can[String] = session.flatMap(_.get[String](what))
 
   /**
    * Returns the HttpSession parameter denominated by 'what'
@@ -661,7 +676,14 @@ object S extends HasParams {
   /**
    * Get a map of the name/functions
    */
-  def functionMap: Map[String, AFuncHolder] = Can.legacyNullTest(_functionMap.value).map(s => Map(s.elements.toList :_*)).openOr(Map.empty)
+  def functionMap: Map[String, AFuncHolder] =
+  Can.legacyNullTest(_functionMap.value).
+  map(s => Map(s.elements.toList :_*)).openOr(Map.empty)
+
+  /**
+   * Clears the function map.  potentially very destuctive... use at own risk
+   */
+  def clearFunctionMap {Can.!!(_functionMap.value).foreach(_.clear)}
 
   /**
    * The current context path
@@ -670,7 +692,8 @@ object S extends HasParams {
 
   def locateSnippet(name: String): Can[NodeSeq => NodeSeq] = {
     val snippet = if (name.indexOf(".") != -1) name.roboSplit("\\.") else name.roboSplit(":") // name.split(":").toList.map(_.trim).filter(_.length > 0)
-    if (LiftRules.snippetTable.isDefinedAt(snippet)) Full(LiftRules.snippetTable(snippet)) else Empty
+    NamedPF.applyCan(snippet, LiftRules.snippetTable)
+    // if (LiftRules.snippetTable.isDefinedAt(snippet)) Full(LiftRules.snippetTable(snippet)) else Empty
   }
 
   private object _currentSnippet extends RequestVar[Can[String]](Empty)

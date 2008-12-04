@@ -21,7 +21,7 @@ import _root_.java.lang.reflect.Method
 import _root_.java.sql.{ResultSet, Types, PreparedStatement, Statement}
 import _root_.scala.xml.{Elem, Node, Text, NodeSeq, Null, TopScope, UnprefixedAttribute, MetaData}
 import _root_.net.liftweb.util.Helpers._
-import _root_.net.liftweb.util.{Can, Empty, Full, Failure}
+import _root_.net.liftweb.util.{Can, Empty, Full, Failure, NamedPF}
 import _root_.net.liftweb.http.{LiftRules, S, SHtml, FieldError}
 import _root_.java.util.Date
 import _root_.net.liftweb.http.js._
@@ -198,6 +198,12 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
     }
   }
 
+  type KeyDude = T forSome {type T}
+  type OtherMapper = T forSome {type T <: KeyedMapper[KeyDude, T]}
+  type OtherMetaMapper = T forSome {type T <: KeyedMetaMapper[KeyDude, OtherMapper]}
+  //type OtherMapper = KeyedMapper[_, (T forSome {type T})]
+  //type OtherMetaMapper = KeyedMetaMapper[_, OtherMapper]
+
   def findAllFields(fields: Seq[SelectableField],
                     by: QueryParam[A]*): List[A] =
   findMapFieldDb(dbDefaultConnectionIdentifier,
@@ -208,11 +214,54 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                       by: QueryParam[A]*):
   List[A] = findMapFieldDb(dbId, fields, by :_*)(v => Full(v))
 
-  def findAll(by: QueryParam[A]*): List[A] =
-  findMapDb(dbDefaultConnectionIdentifier, by :_*)(v => Full(v))
+  private def dealWithJoins(ret: List[A], by: Seq[QueryParam[A]]): List[A] = {
 
-  def findAllDb(dbId: ConnectionIdentifier,by: QueryParam[A]*):
-  List[A] = findMapDb(dbId, by :_*)(v => Full(v))
+    val join = by.flatMap{case j: Join[A] => List(j) case _ => Nil}
+    for (j <- join) {
+      type FT = j.field.FieldType
+    type MT = T forSome {type T <: KeyedMapper[FT, T]}
+    
+
+      val ol: List[MT] = j.field.dbKeyToTable.
+      asInstanceOf[MetaMapper[A]].
+      findAll(new InThing[A]{
+          type JoinType = FT
+          type InnerType = A
+
+          val outerField: MappedField[JoinType, A] =
+          j.field.dbKeyToTable.primaryKeyField.asInstanceOf[MappedField[JoinType, A]]
+          val innerField: MappedField[JoinType, A] = j.field.asInstanceOf[MappedField[JoinType, A]]
+          val innerMeta: MetaMapper[A] = j.field.fieldOwner.getSingleton
+
+          val queryParams: List[QueryParam[A]] = by.toList
+        }.asInstanceOf[QueryParam[A]] ).asInstanceOf[List[MT]]
+
+      val map: Map[FT, MT] =
+      Map(ol.map(v => (v.primaryKeyField.is, v)) :_*)
+
+      for (i <- ret) {
+        
+        val field: MappedForeignKey[FT, A, _] =
+        getActualField(i, j.field).asInstanceOf[MappedForeignKey[FT, A, _]]
+
+        map.get(field.is) match {
+          case Some(v) => field.primeObj(Full(v))
+            case _ => field.primeObj(Empty)
+        }
+        //field.primeObj(Can(map.get(field.is).map(_.asInstanceOf[QQ])))
+      }
+    }
+
+    ret
+  }
+
+  def findAll(by: QueryParam[A]*): List[A] =
+  dealWithJoins(findMapDb(dbDefaultConnectionIdentifier, by :_*)
+                (v => Full(v)), by)
+
+
+  def findAllDb(dbId: ConnectionIdentifier,by: QueryParam[A]*): List[A] =
+  dealWithJoins(findMapDb(dbId, by :_*)(v => Full(v)), by)
 
   def bulkDelete_!!(by: QueryParam[A]*): Boolean = bulkDelete_!!(dbDefaultConnectionIdentifier, by :_*)
   def bulkDelete_!!(dbId: ConnectionIdentifier, by: QueryParam[A]*): Boolean = {
@@ -316,7 +365,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
 
 
               // Executes a subquery with {@code query}
-            case BySql(query, _*) =>
+            case BySql(query, _,  _*) =>
               updatedWhat = updatedWhat + whereOrAnd + " ( "+ query +" ) "
             case _ =>
           }
@@ -349,7 +398,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
                                                      curPos)
         setStatementFields(st, xs, newPos)
 
-      case BySql(query, params @ _*) :: xs => {
+      case BySql(query, who, params @ _*) :: xs => {
           params.toList match {
             case Nil => setStatementFields(st, xs, curPos)
             case List(i: Int) =>
@@ -368,7 +417,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
               setStatementFields(st, xs, curPos + 1)
 
             case p :: ps =>
-              setStatementFields(st, BySql[A](query, p) :: BySql[A](query, ps: _*) :: xs, curPos)
+              setStatementFields(st, BySql[A](query, who, p) :: BySql[A](query, who, ps: _*) :: xs, curPos)
           }
         }
       case _ :: xs => {
@@ -382,7 +431,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
   private def _addOrdering(in: String, params: List[QueryParam[A]]): String = {
     params.flatMap{
       case OrderBy(field, order) => List(field.dbColumnName+" "+order.sql)
-      case OrderBySql(sql) => List(sql)
+      case OrderBySql(sql, _) => List(sql)
       case _ => Nil
     } match {
       case Nil => in
@@ -728,7 +777,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
     }
   }
 
-  def fieldMapperPf(transform: (BaseOwnedMappedField[A] => NodeSeq), actual: A): PartialFunction[String, NodeSeq => NodeSeq] = {
+  def fieldMapperPF(transform: (BaseOwnedMappedField[A] => NodeSeq), actual: A): PartialFunction[String, NodeSeq => NodeSeq] = {
     Map.empty ++ mappedFieldList.map ( mf =>
       (mf.name, ((ignore: NodeSeq) => transform(??(mf.method, actual))))
     )
@@ -931,7 +980,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
    * @param func called with displayHtml, fieldId, form
    */
   def mapFieldTitleForm[T](toMap: A,
-  func: (NodeSeq, Can[NodeSeq], NodeSeq) => T): List[T] =
+                           func: (NodeSeq, Can[NodeSeq], NodeSeq) => T): List[T] =
   formFields(toMap).flatMap(field => field.toForm.
                             map(fo => func(field.displayHtml, field.fieldId, fo)))
 
@@ -941,7 +990,7 @@ trait MetaMapper[A<:Mapper[A]] extends BaseMetaMapper with Mapper[A] {
    * @param func called with displayHtml, fieldId, form
    */
   def flatMapFieldTitleForm[T](toMap: A,
-  func: (NodeSeq, Can[NodeSeq], NodeSeq) => Seq[T]): List[T] =
+                               func: (NodeSeq, Can[NodeSeq], NodeSeq) => Seq[T]): List[T] =
   formFields(toMap).flatMap(field => field.toForm.toList.
                             flatMap(fo => func(field.displayHtml,
                                                field.fieldId, fo)))
@@ -1072,10 +1121,13 @@ case object Descending extends AscOrDesc {
   def sql: String = " DESC "
 }
 
-case class OrderBySql[O <: Mapper[O]](sql: String) extends QueryParam[O]
+case class OrderBySql[O <: Mapper[O]](sql: String,
+                                     checkedBy: IHaveValidatedThisSQL) extends QueryParam[O]
 
 case class ByList[O<:Mapper[O], T](field: MappedField[T,O], vals: List[T]) extends QueryParam[O]
-case class BySql[O<:Mapper[O]](query: String, params: Any*) extends QueryParam[O]
+case class BySql[O<:Mapper[O]](query: String,
+                                     checkedBy: IHaveValidatedThisSQL,
+                                     params: Any*) extends QueryParam[O]
 case class MaxRows[O<:Mapper[O]](max: Long) extends QueryParam[O]
 case class StartAt[O<:Mapper[O]](start: Long) extends QueryParam[O]
 case class Ignore[O <: Mapper[O]]() extends QueryParam[O]
@@ -1089,6 +1141,9 @@ abstract class InThing[OuterType <: Mapper[OuterType]] extends QueryParam[OuterT
   def innerMeta: MetaMapper[InnerType]
   def queryParams: List[QueryParam[InnerType]]
 }
+
+case class Join[TheType <: Mapper[TheType]](field: MappedForeignKey[_, TheType, _])
+extends QueryParam[TheType]
 
 case class InRaw[TheType <:
                  Mapper[TheType], T](field: MappedField[T, TheType],
@@ -1342,7 +1397,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
 
   override def afterSchemifier {
     if (crudSnippets_?) {
-      LiftRules.addSnippetAfter(crudSnippets)
+      LiftRules.appendSnippet(crudSnippets)
     }
   }
 
@@ -1363,10 +1418,10 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
    *
    * (No, there's no D in CRUD.)
    */
-  def crudSnippets: LiftRules.SnippetPf = {
+  def crudSnippets: LiftRules.SnippetPF = {
     val Name = _dbTableName
 
-    {
+    NamedPF("crud "+Name) {
       case Name :: "add"  :: _ => addSnippet
       case Name :: "edit" :: _ => editSnippet
       case Name :: "view" :: _ => viewSnippet
@@ -1383,7 +1438,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
       cleanup(obj)
     }
 
-    xbind(name, xhtml)(obj.fieldPf orElse obj.fieldMapperPf(_.toForm.openOr(Text(""))) orElse {
+    xbind(name, xhtml)(obj.fieldPF orElse obj.fieldMapperPF(_.toForm.openOr(Text(""))) orElse {
         case "submit" => label => SHtml.submit(label.text, callback _)
       })
   }
@@ -1409,7 +1464,7 @@ trait KeyedMetaMapper[Type, A<:KeyedMapper[Type, A]] extends MetaMapper[A] with 
     val Name = _dbTableName
     val obj: A = viewSnippetSetup
 
-    xbind(Name, xhtml)(obj.fieldPf orElse obj.fieldMapperPf(_.asHtml))
+    xbind(Name, xhtml)(obj.fieldPF orElse obj.fieldMapperPF(_.asHtml))
   }
 
   /**

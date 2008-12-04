@@ -108,7 +108,7 @@ trait Record[MyType <: Record[MyType]] {
    *
    * @return Can[MappedField]
    */
-  def fieldByName[T](fieldName: String): Can[Field[T, MyType]] = meta.fieldByName[T](fieldName, this)
+  def fieldByName(fieldName: String): Can[OwnedField[MyType]] = meta.fieldByName(fieldName, this)
 }
 
 trait ExpandoRecord[MyType <: Record[MyType] with ExpandoRecord[MyType]] {
@@ -125,7 +125,7 @@ trait ExpandoRecord[MyType <: Record[MyType] with ExpandoRecord[MyType]] {
 }
 
 
-trait KeyedRecord[MyType <: KeyedRecord[MyType, KeyType] with Record[MyType], KeyType] {
+trait KeyedRecord[MyType <: KeyedRecord[MyType, KeyType], KeyType] extends Record[MyType] {
   self: MyType =>
 
   def primaryKey: KeyField[KeyType, MyType]

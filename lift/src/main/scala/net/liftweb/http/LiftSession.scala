@@ -17,11 +17,13 @@ package net.liftweb.http
 
 import _root_.scala.actors.Actor
 import _root_.scala.actors.Actor._
+import _root_.scala.reflect.Manifest
 import _root_.javax.servlet.http.{HttpSessionBindingListener, HttpSessionBindingEvent, HttpSession}
 import _root_.scala.collection.mutable.{HashMap, ArrayBuffer, ListBuffer}
 import _root_.scala.xml.{NodeSeq, Unparsed, Text}
 import _root_.net.liftweb.mapper.DB
 import _root_.net.liftweb.util._
+import Can._
 import _root_.net.liftweb.http.js.{JsCmd, AjaxInfo}
 import _root_.net.liftweb.util.Helpers._
 import _root_.java.lang.reflect.{Method, Modifier, InvocationTargetException}
@@ -199,9 +201,9 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   @volatile
   private[http] var inactivityLength = 180000L
 
-  private [http] var highLevelSessionDispatcher = new HashMap[String, LiftRules.DispatchPf]()
-  private [http] var sessionTemplater = new HashMap[String, LiftRules.TemplatePf]()
-  private [http] var sessionRewriter = new HashMap[String, LiftRules.RewritePf]()
+  private [http] var highLevelSessionDispatcher = new HashMap[String, LiftRules.DispatchPF]()
+  private [http] var sessionTemplater = new HashMap[String, LiftRules.TemplatePF]()
+  private [http] var sessionRewriter = new HashMap[String, LiftRules.RewritePF]()
 
   private[http] def startSession(): Unit = {
     running_? = true
@@ -332,67 +334,69 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       val sessionDispatch = S.highLevelSessionDispatcher
 
       val toMatch = request
-      if (sessionDispatch.isDefinedAt(toMatch)) {
-        runParams(request)
-        try {
-          sessionDispatch(toMatch)() match {
-            case Full(r) => Full(checkRedirect(r))
-            case _ => LiftRules.notFoundOrIgnore(request, Full(this))
+      NamedPF.applyCan(toMatch, sessionDispatch) match {
+        case Full(f) =>
+          runParams(request)
+          try {
+            f() match {
+              case Full(r) => Full(checkRedirect(r))
+              case _ => LiftRules.notFoundOrIgnore(request, Full(this))
+            }
+          } finally {
+            notices = S.getNotices
           }
-        } finally {
-          notices = S.getNotices
-        }
-      } else {
-        runParams(request)
 
-        def idAndWhen(in: Node): Can[CometVersionPair] =
-        ((in \ "@id").toList, in.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when") case _ => false}.toList) match {
-          case (x :: _, y :: _) => Full(CVP(x.text,toLong(y.value.text)))
-          case _ => Empty
-        }
+        case _ =>
+          runParams(request)
+	
+          def idAndWhen(in: Node): Can[CometVersionPair] =
+          ((in \ "@id").toList, in.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when") case _ => false}.toList) match {
+            case (x :: _, y :: _) => Full(CVP(x.text,toLong(y.value.text)))
+            case _ => Empty
+          }
 
-        // Process but make sure we're okay, sitemap wise
-        val response: Can[LiftResponse] = request.testLocation match {
-          case Left(true) =>
-            ((locTemplate or findVisibleTemplate(request.path, request)).
-             map(xml => processSurroundAndInclude(request.uri+" -> "+request.path, xml)) match {
-                case Full(rawXml: NodeSeq) => {
-                    val xml = HeadHelper.mergeToHtmlHead(rawXml)
-                    val cometXform: List[RewriteRule] =
-                    if (LiftRules.autoIncludeComet(this))
-                    allElems(xml, !_.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when") case _ => false}.toList.isEmpty) match {
-                      case Nil => Nil
-                      case xs =>
-                        val comets: List[CometVersionPair] = xs.flatMap(x => idAndWhen(x))
-                        new AddScriptToBody(comets) :: Nil
+          // Process but make sure we're okay, sitemap wise
+          val response: Can[LiftResponse] = request.testLocation match {
+            case Left(true) =>
+              ((locTemplate or findVisibleTemplate(request.path, request)).
+               map(xml => processSurroundAndInclude(request.uri+" -> "+request.path, xml)) match {
+                  case Full(rawXml: NodeSeq) => {
+                      val xml = HeadHelper.mergeToHtmlHead(rawXml)
+                      val cometXform: List[RewriteRule] =
+                      if (LiftRules.autoIncludeComet(this))
+                      allElems(xml, !_.attributes.filter{case p: PrefixedAttribute => (p.pre == "lift" && p.key == "when") case _ => false}.toList.isEmpty) match {
+                        case Nil => Nil
+                        case xs =>
+                          val comets: List[CometVersionPair] = xs.flatMap(x => idAndWhen(x))
+                          new AddScriptToBody(comets) :: Nil
+                      }
+                      else Nil
+		 
+                      val ajaxXform: List[RewriteRule] =
+                      if (LiftRules.autoIncludeAjax(this)) new AddAjaxToBody() :: cometXform
+                      else cometXform
+		 
+		 
+                      val realXml = if (ajaxXform.isEmpty) xml
+                      else (new RuleTransformer(ajaxXform :_*)).transform(xml)
+		 
+                      this.synchronized {
+                        S.functionMap.foreach(mi => messageCallback(mi._1) = mi._2)
+                      }
+                      notices = Nil // S.getNotices
+                      Full(LiftRules.convertResponse((realXml,
+                                                      S.getHeaders(LiftRules.defaultHeaders((realXml, request))),
+                                                      S.responseCookies,
+                                                      request)))
                     }
-                    else Nil
-
-                    val ajaxXform: List[RewriteRule] =
-                    if (LiftRules.autoIncludeAjax(this)) new AddAjaxToBody() :: cometXform
-                    else cometXform
-
-
-                    val realXml = if (ajaxXform.isEmpty) xml
-                    else (new RuleTransformer(ajaxXform :_*)).transform(xml)
-
-                    this.synchronized {
-                      S.functionMap.foreach(mi => messageCallback(mi._1) = mi._2)
-                    }
-                    notices = Nil // S.getNotices
-                    Full(LiftRules.convertResponse((realXml,
-                                                    S.getHeaders(LiftRules.defaultHeaders((realXml, request))),
-                                                    S.responseCookies,
-                                                    request)))
-                  }
-                case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
-              })
-          case Right(msg) => msg
-          case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
-        }
-
-        // Before returning the response check for redirect and set the appropriate state.
-        response.map(checkRedirect)
+                  case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
+                })
+            case Right(msg) => msg
+            case _ => if (LiftRules.passNotFoundToChain) Empty else Full(request.createNotFound)
+          }
+	
+          // Before returning the response check for redirect and set the appropriate state.
+          response.map(checkRedirect)
       }
     } catch {
       case ite: _root_.java.lang.reflect.InvocationTargetException if (ite.getCause.isInstanceOf[ResponseShortcutException]) =>
@@ -432,26 +436,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
    * @return Full(value) if found, Empty otherwise
    */
   private [liftweb] def get[T](name: String): Can[T] = synchronized {
-    myVariables.get(name) match {
-      case Some(v: T) => Full(v)
-      case _ => Empty
-    }
-  }
-
-
-  /**
-   * Gets the named variable if it exists
-   *
-   * @param name -- the name of the session-local variable to get
-   * @param clz -- the class of the return type
-   *
-   * @return Full(value) if found, Empty otherwise
-   */
-  private [liftweb] def get[T](name: String, clz: Class[T]): Can[T] = synchronized {
-    myVariables.get(name) match {
-      case Some(v) => Full(v) isA clz
-      case _ => Empty
-    }
+    Can(myVariables.get(name)).asInstanceOf[Can[T]]
   }
 
   /**
@@ -509,10 +494,10 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     lb.toList
   }
 
-  private def findVisibleTemplate(path: ParsePath, session: Req) : Can[NodeSeq] = {
+  private def findVisibleTemplate(path: ParsePath, session: Req): Can[NodeSeq] = {
     val toMatch = session
     val templ = LiftRules.templateTable(session.request)
-    (if (templ.isDefinedAt(toMatch)) templ(toMatch)() else Empty) or {
+    NamedPF.applyCan(toMatch, templ).flatMap(_.apply) or {
       val tpath = path.partPath
       val splits = tpath.toList.filter {a => !a.startsWith("_") && !a.startsWith(".") && a.toLowerCase.indexOf("-hidden") == -1} match {
         case s @ _ if (!s.isEmpty) => s
@@ -551,15 +536,15 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     }
   }
 
-  private def findSnippetClass[C <: AnyRef](name: String, bound: Class[C]): Can[Class[C]] = {
+  private def findSnippetClass(name: String): Can[Class[AnyRef]] = {
     if (name == null) Empty
-    else findClass(name, LiftRules.buildPackage("snippet") ::: ("lift.app.snippet" :: "net.liftweb.builtin.snippet" :: Nil), bound)
+    else findClass(name, LiftRules.buildPackage("snippet") ::: ("lift.app.snippet" :: "net.liftweb.builtin.snippet" :: Nil))
   }
 
   private def findAttributeSnippet(name: String, rest: MetaData): MetaData = {
     val (cls, method) = splitColonPair(name, null, "render")
 
-    findSnippetClass(cls, classOf[AnyRef]).flatMap(clz => instantiate(clz).flatMap(inst =>
+    findSnippetClass(cls).flatMap(clz => instantiate(clz).flatMap(inst =>
         (invokeMethod(clz, inst, method) match {
             case Full(md: MetaData) => Full(md.copy(rest))
             case _ => Empty
@@ -583,7 +568,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
 
   private def findSnippetInstance(cls: String): Can[AnyRef] =
   S.snippetForClass(cls) or
-  (findSnippetClass(cls, classOf[AnyRef]).flatMap(c => instantiate(c)) match {
+  (findSnippetClass(cls).flatMap(c => instantiate(c)) match {
       case Full(inst: StatefulSnippet) =>
         inst.snippetName = cls; S.setSnippetForClass(cls, inst); Full(inst)
       case Full(ret) => Full(ret)
@@ -670,15 +655,17 @@ class LiftSession(val contextPath: String, val uniqueId: String,
    * of LiftRules.liftTagProcessing orElse the default lift tag processing.  If you need to change the
    * way a particular session handles lift tags, alter this partial function.
    */
-  var liftTagProcessing: LiftRules.LiftTagPF = _
+  var liftTagProcessing: List[LiftRules.LiftTagPF] = _
 
   /**
    * The basic partial function that does lift tag processing
    */
-  private def _defaultLiftTagProcessing: LiftRules.LiftTagPF = {
+  private def _defaultLiftTagProcessing: LiftRules.LiftTagPF = 
+  NamedPF("Default Lift Tags") {
     case ("snippet", elm, metaData, kids, page) =>
       metaData.get("type") match {
-        case Some(tn) => liftTagProcessing((tn.text, elm, metaData, kids, page))
+        case Some(tn) => NamedPF((tn.text, elm, metaData, kids, page),
+                                 liftTagProcessing)
         case _ => processSnippet(page, Empty , elm.attributes, elm.child)
       }
     case ("surround", elm, _, _, page) => processSurroundElement(page, elm)
@@ -692,14 +679,16 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     case (snippetInfo, elm, metaData, kids, page) => processSnippet(page, Full(snippetInfo) , metaData, kids)
   }
 
-  liftTagProcessing = LiftRules.liftTagProcessing orElse _defaultLiftTagProcessing
+  liftTagProcessing = LiftRules.liftTagProcessing ::: List(_defaultLiftTagProcessing)
+
+  private def asNodeSeq(in: Seq[Node]): NodeSeq = in
 
   def processSurroundAndInclude(page: String, in: NodeSeq): NodeSeq = {
     in.flatMap{
       v =>
       v match {
         case Group(nodes) => Group(processSurroundAndInclude(page, nodes))
-        case elm: Elem if elm.prefix == "lift" || elm.prefix == "l" => S.setVars(elm.attributes)(processSurroundAndInclude(page, liftTagProcessing(elm.label, elm, elm.attributes, elm.child, page)))
+        case elm: Elem if elm.prefix == "lift" || elm.prefix == "l" => S.setVars(elm.attributes)(processSurroundAndInclude(page, NamedPF((elm.label, elm, elm.attributes, asNodeSeq(elm.child), page), liftTagProcessing)))
         case elm: Elem => Elem(v.prefix, v.label, processAttributes(v.attributes), v.scope, processSurroundAndInclude(page, v.child) : _*)
         case _ => v
       }
@@ -763,7 +752,7 @@ class LiftSession(val contextPath: String, val uniqueId: String,
   }
 
   private def findCometByType(contType: String, name: Can[String], defaultXml: NodeSeq, attributes: Map[String, String]): Can[CometActor] = {
-    findClass(contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil), classOf[CometActor]).flatMap{
+    findType[CometActor](contType, LiftRules.buildPackage("comet") ::: ("lift.app.comet" :: Nil)).flatMap{
       cls =>
       tryo((e: Throwable) => e match {case e: _root_.java.lang.NoSuchMethodException => ()
           case e => Log.info("Comet find by type Failed to instantiate "+cls.getName, e)}) {
@@ -860,8 +849,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
         Elem(null, "head", e.attributes,  e.scope, (e.child ++
                                                     <script
               src={S.encodeURL("/"+
-                   LiftRules.ajaxPath +
-                   "/" + LiftRules.ajaxScriptName())}
+                               LiftRules.ajaxPath +
+                               "/" + LiftRules.ajaxScriptName())}
               type="text/javascript"/>) :_*)
       case n => n
     }
@@ -879,9 +868,9 @@ class LiftSession(val contextPath: String, val uniqueId: String,
              e.scope,
              (e.child ++
               <script src={S.encodeURL("/"+
-                           LiftRules.cometPath +
-                           "/" + uniqueId +
-                           "/" + LiftRules.cometScriptName())}
+                                       LiftRules.cometPath +
+                                       "/" + uniqueId +
+                                       "/" + LiftRules.cometScriptName())}
               type="text/javascript"/>) :_*)
 
       case e: Elem if e.label == "body" && !doneBody =>
@@ -933,18 +922,19 @@ object TemplateFinder {
    * @return the template if it can be found
    */
   def findAnyTemplate(places: List[String]): Can[NodeSeq] = {
-    if (LiftRules.viewDispatch.isDefinedAt(places.dropRight(1))) {
-      val lv = LiftRules.viewDispatch(places.dropRight(1))
-      val a = places.last
+    NamedPF.applyCan(places.dropRight(1), LiftRules.viewDispatch) match {
+      case Full(lv) =>
+        val a = places.last
 
-      if (lv.dispatch.isDefinedAt(a))
-      lv.dispatch(a)()
-      else Empty
-    } else {
-      val pls = places.mkString("/","/", "")
-      val toTry = for (s <- suffixes; p <- locales) yield pls + p + (if (s.length > 0) "." + s else "")
+        if (lv.dispatch.isDefinedAt(a))
+        lv.dispatch(a)()
+        else Empty
 
-      first(toTry)(v => LiftRules.finder(v).flatMap(fc => PCDataXmlParser(fc))) or lookForClasses(places)
+      case _ =>
+        val pls = places.mkString("/","/", "")
+        val toTry = for (s <- suffixes; p <- locales) yield pls + p + (if (s.length > 0) "." + s else "")
+      
+        first(toTry)(v => LiftRules.finder(v).flatMap(fc => PCDataXmlParser(fc))) or lookForClasses(places)
     }
   }
 
