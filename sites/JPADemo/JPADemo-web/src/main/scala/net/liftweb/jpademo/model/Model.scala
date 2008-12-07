@@ -50,6 +50,10 @@ object Model extends ScalaEntityManager("jpaweb") {
     Log.debug("Got transaction: " + tx)
     tx.begin()
 
+    val testVal = ctxt.lookup("java:comp/env/test").asInstanceOf[java.lang.Double]
+
+    println("HEY! My test val is " + testVal)
+
     val em = ctxt.lookup("java:comp/env/persistence/" + persistanceName).asInstanceOf[EntityManager]
 
     Log.debug("TX status = " + txStatus(tx.getStatus()))
