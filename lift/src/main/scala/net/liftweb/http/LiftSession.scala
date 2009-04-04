@@ -1097,7 +1097,9 @@ object TemplateFinder {
         val pls = places.mkString("/","/", "")
         val toTry = for (s <- suffixes; p <- locales) yield pls + p + (if (s.length > 0) "." + s else "")
 
-        first(toTry)(v => LiftRules.finder(v).flatMap(fc => PCDataXmlParser(fc))) or lookForClasses(places)
+        first(toTry)(v => LiftRules.templateCache.findTemplate(v)(
+          LiftRules.finder(v).flatMap(fc => PCDataXmlParser(fc))
+        )) or lookForClasses(places)
     }
   }
 

@@ -804,7 +804,7 @@ object LiftRules {
     when.is
   }
 
-lazy val liftVersion = "0.11-SNAPSHOT"
+  lazy val liftVersion = "0.11-SNAPSHOT"
 
   /**
    * Hods the last update time of the Comet request. Based on this server mayreturn HTTP 304 status
@@ -852,6 +852,8 @@ lazy val liftVersion = "0.11-SNAPSHOT"
                             "Expires" -> toInternetDate(modTime + 10.minutes)),
                             Nil, 200))
   }
+
+  var templateCache: TemplateCache = NoCache
 
   private def testFor304(req: Req, lastModified: Long): Box[LiftResponse] = {
     val mod = req.request.getHeader("if-modified-since")
