@@ -97,7 +97,7 @@ trait MockEntries extends MockRequest {
 }
 import javax.servlet.http._
 import org.specs.mock.Mockito
- 
+
 trait MockRequest extends Mockito {
   var request = mock[Req]
   var httpRequest = mock[HttpServletRequest]

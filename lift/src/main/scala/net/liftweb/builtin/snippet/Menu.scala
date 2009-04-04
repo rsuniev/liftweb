@@ -87,13 +87,13 @@ class Menu extends DispatchSnippet {
 	S.request.map(_.buildMenu.lines)
       }
     } openOr Nil
-    
+
     toRender.toList match {
       case Nil => Text("No Navigation Defined.")
       case xs =>
         val liMap = S.prefixedAttrsToMap("li")
         val li = S.mapToAttrs(liMap)
-	
+
         def buildANavItem(i: MenuItem) = {
           i match {
             case MenuItem(text, uri, kids, true, _, _) if expandAll =>
@@ -107,14 +107,14 @@ class Menu extends DispatchSnippet {
           }
         }
 
-        def buildUlLine(in: Seq[MenuItem]) : NodeSeq = 
+        def buildUlLine(in: Seq[MenuItem]) : NodeSeq =
 	  if (in.isEmpty) {
 	    Text("")
 	  } else {
 	    <ul>{in.flatMap(buildANavItem)}</ul> %
             S.prefixedAttrsToMetaData("ul")
 	  }
-      
+
         buildUlLine(xs) match {
 	  case top : Elem => top % S.prefixedAttrsToMetaData("top")
 	  case other => other
@@ -174,7 +174,7 @@ class Menu extends DispatchSnippet {
    *   &lt;li&gt;&lt;menu:bind /&gt;&lt;/li&gt;
    * &lt;/lift:Menu.group&gt;
    * </pre>
-   *  
+   *
    */
   def group(template: NodeSeq): NodeSeq = {
     val toBind = if ((template \ "bind").filter(_.prefix == "menu").isEmpty)
@@ -205,7 +205,7 @@ class Menu extends DispatchSnippet {
    * </pre>
    *
    * <p>You can then select the item using the name attribute:</p>
-  * 
+   *
    * <pre>
    * &lt;lift:Menu.item name="b" /&gt;
    * </pre>
@@ -228,9 +228,9 @@ class Menu extends DispatchSnippet {
    * <p>Normally, the Menu item is not shown on pages that match its Menu's Loc. You can
    * set the "donthide" attribute on the tag to force it to show text only (same text as normal,
    * but not in an anchor tag)</p>
-   * 
+   *
    */
-  def item(text: NodeSeq): NodeSeq = 
+  def item(text: NodeSeq): NodeSeq =
       for (name <- S.attr("name").toList;
 	   request <- S.request.toList;
 	   loc <- request.location.toList)
@@ -239,7 +239,7 @@ class Menu extends DispatchSnippet {
     	  val itemLink = SiteMap.buildLink(name, text) match {
     	  	case e : Elem => e % S.prefixedAttrsToMetaData("a")
             case x => x
-    	  }  
+    	  }
           Group(itemLink)
 	    } else if (S.attr("donthide").isDefined) {
 	      // Use the provided text if it's non-empty, otherwise, default to Loc's LinkText
