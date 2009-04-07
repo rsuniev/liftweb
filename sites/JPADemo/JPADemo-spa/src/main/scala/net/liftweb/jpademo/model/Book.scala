@@ -40,6 +40,6 @@ class Book {
   @Type{val `type` = "net.liftweb.jpademo.model.GenreType"}
   var genre : Genre.Value = Genre.unknown
 
-  @ManyToOne
+  @ManyToOne{val optional = false}
   var author : Author = _
 }

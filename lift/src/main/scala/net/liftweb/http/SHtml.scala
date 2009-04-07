@@ -269,6 +269,9 @@ object SHtml {
   def hidden(func: () => Any, attrs: (String, String)*): Elem =
   makeFormElement("hidden", NFuncHolder(func), attrs :_*) % ("value" -> "true")
 
+  def hidden(func: (String) => Any, defaultlValue: String, attrs: (String, String)*): Elem =
+  makeFormElement("hidden", SFuncHolder(func), attrs :_*) % ("value" -> defaultlValue)
+
   def submit(value: String, func: () => Any, attrs: (String, String)*): Elem =
   makeFormElement("submit", NFuncHolder(func), attrs :_*) %
   new UnprefixedAttribute("value", Text(value), Null)
