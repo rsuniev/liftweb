@@ -126,7 +126,10 @@ object Props {
   /**
    * The resource path segment corresponding to the system hostname.
    */
-  val hostName = InetAddress.getLocalHost.getHostName + "."
+  // TODO InetAddress is not available on GAE/J
+  // Should it be configurable in Boot.scala?
+  //val hostName = InetAddress.getLocalHost.getHostName + "."
+  val hostName = "GAE/J" + "."
 
   /**
    * The list of paths to search for property file resources.

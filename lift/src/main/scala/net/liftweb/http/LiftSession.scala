@@ -202,6 +202,14 @@ object SessionMaster extends Actor {
     }
   }
 
+  // TODO On GAE/J, we can not make a thread.
+  // If you use LiftRules.dispatch.prepend, SessionMaster will start
+  // automatically, and it will throw an exception.
+  override def start()={
+    try{ super.start }
+    catch{ case _:java.lang.ExceptionInInitializerError => this }
+  }
+
   this.start
 
   private def doPing() {

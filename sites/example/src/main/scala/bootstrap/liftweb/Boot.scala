@@ -40,12 +40,20 @@ import Actor._
  */
 class Boot {
   def boot {
+
+    // TODO Unfortunately, jdbc is not available on GAE/J.
+    // JPA should be used.
+    /*
     DB.defineConnectionManager(DefaultConnectionIdentifier, DBVendor)
+    */ 
     LiftRules.addToPackages("net.liftweb.example")
 
     LiftRules.localeCalculator = r => definedLocale.openOr(LiftRules.defaultLocaleCalculator(r))
 
+    // TODO
+    /*
     Schemifier.schemify(true, Log.infoF _, User, WikiEntry, Person)
+    */
 
     LiftRules.dispatch.prepend(NamedPF("Web Services Example") {
         // if the url is "showcities" then return the showCities function
