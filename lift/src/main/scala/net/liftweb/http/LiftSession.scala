@@ -105,8 +105,12 @@ case class SessionToServletBridge(uniqueId: String) extends HttpSessionBindingLi
    * When the session is unbound the the HTTP session, stop us
    */
   def valueUnbound(event: HttpSessionBindingEvent) {
-    SessionMaster ! RemoveSession(uniqueId)
-
+    try{
+      SessionMaster ! RemoveSession(this.uniqueId)
+    }
+    catch { case _:java.lang.ExceptionInInitializerError =>
+      SessionMaster.removeSession(this.uniqueId)
+    }
   }
 
 }
@@ -167,24 +171,7 @@ object SessionMaster extends Actor {
     link(ActorWatcher)
     loop {
       react {
-        case RemoveSession(sessionId) =>
-          val ses = synchronized(sessions)
-          ses.get(sessionId).foreach{s =>
-            try {
-              s.doShutDown
-              try {
-                s.httpSession.removeAttribute(LiftMagicID)
-              } catch {
-                case e => // ignore... sometimes you can't do this and it's okay
-              }
-            } catch {
-              case e => Log.error("Failure in remove session", e)
-
-            } finally {
-              synchronized{ sessions = sessions - sessionId }
-            }
-          }
-
+        case RemoveSession(sessionId) => removeSession(sessionId)
         case CheckAndPurge =>
           val now = millis
           val ses = synchronized{sessions}
@@ -198,6 +185,24 @@ object SessionMaster extends Actor {
           }
           sessionWatchers.foreach(_ ! SessionWatcherInfo(ses))
           doPing()
+      }
+    }
+  }
+
+  private[http] def removeSession(sessionId:String)={
+    val ses = synchronized(sessions)
+    ses.get(sessionId).foreach{s =>
+      try {
+        s.doShutDown
+        try {
+          s.httpSession.removeAttribute(LiftMagicID)
+        } catch {
+          case e => // ignore... sometimes you can't do this and it's okay
+        }
+      } catch {
+        case e => Log.error("Failure in remove session", e)
+      } finally {
+        synchronized{ sessions = sessions - sessionId }
       }
     }
   }
@@ -414,7 +419,13 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       onSessionEnd.foreach(_(this))
 
       LiftSession.onAboutToShutdownSession.foreach(_(this))
-      SessionMaster ! RemoveSession(this.uniqueId)
+      
+      try{
+        SessionMaster ! RemoveSession(this.uniqueId)
+      }
+      catch { case _:java.lang.ExceptionInInitializerError =>
+        SessionMaster.removeSession(this.uniqueId)
+      }
 
       // Log.debug("Shutting down session")
       running_? = false
