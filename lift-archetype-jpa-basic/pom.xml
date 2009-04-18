@@ -9,7 +9,7 @@
   <artifactId>lift-archetype-jpa-basic</artifactId>
   <packaging>maven-archetype</packaging>
   <name>${project.artifactId}</name>
-  <description>Archetype - blank JPA project for Lift</description>
+  <description>Archetype - demo JPA project for Lift</description>
   <properties>
     <lift.version>${project.parent.version}</lift.version>
     <maven.test.skip>true</maven.test.skip>

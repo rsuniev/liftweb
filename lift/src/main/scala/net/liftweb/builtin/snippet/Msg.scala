@@ -40,29 +40,30 @@ import _root_.scala.collection.mutable.HashMap
  *                                                        noticeClass="notice_class"/&gt;
  * </pre>
  */
-class Msg {
-
+object Msg extends DispatchSnippet {
+  def dispatch: DispatchIt = {
+    case _ => render
+  }
   def render(styles: NodeSeq): NodeSeq = {
+    val msgs: (String) => NodeSeq = (id) => {
+      attr("errorClass").map(cls => MsgErrorMeta += (id -> cls))
+      attr("warningClass").map(cls => MsgWarningMeta += (id -> cls))
+      attr("noticeClass").map(cls => MsgNoticeMeta += (id -> cls))
 
-     val msgs: (String) => NodeSeq = (id) => {
-       attr("errorClass").map(cls => MsgErrorMeta += (id -> cls))
-       attr("warningClass").map(cls => MsgWarningMeta += (id -> cls))
-       attr("noticeClass").map(cls => MsgNoticeMeta += (id -> cls))
-
-       val f = messagesById(id) _
-       List((f(S.errors), attr("errorClass")),
-               (f(S.warnings), attr("warningClass")),
-               (f(S.notices), attr("noticeClass"))).flatMap {
-                 case (msg, style) =>
-                   msg.toList match {
-                     case Nil => Nil
-                     case msgList => style match {
-                       case Full(s) => msgList flatMap (t => <span>{t}</span> % ("class" -> s))
-                       case _ => msgList flatMap ( n => n )
-                     }
-                   }
-               }
-     }
+      val f = messagesById(id) _
+      List((f(S.errors), attr("errorClass")),
+           (f(S.warnings), attr("warningClass")),
+           (f(S.notices), attr("noticeClass"))).flatMap {
+        case (msg, style) =>
+          msg.toList match {
+            case Nil => Nil
+            case msgList => style match {
+                case Full(s) => msgList flatMap (t => <span>{t}</span> % ("class" -> s))
+                case _ => msgList flatMap ( n => n )
+              }
+          }
+      }
+    }
 
     attr("id") match {
       case Full(id) => <span>{msgs(id)}</span> % ("id" -> id)

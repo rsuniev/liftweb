@@ -243,3 +243,18 @@ trait HttpHelpers { self: ListHelpers with StringHelpers  =>
 trait ToJsCmd {
   def toJsCmd: String
 }
+
+object CheckNodeSeq {
+  def unapply(in: Any): Option[NodeSeq] = in match {
+    case Some(ns: NodeSeq) => Some(ns)
+    case Full(ns: NodeSeq) => Some(ns)
+    case Some(sq: Seq[_]) if sq.forall(_.isInstanceOf[Node])=> val ns: NodeSeq = sq.asInstanceOf[Seq[Node]]
+      Some(ns)
+    case Full(sq: Seq[_]) if sq.forall(_.isInstanceOf[Node])=> val ns: NodeSeq = sq.asInstanceOf[Seq[Node]]
+      Some(ns)
+    case ns: NodeSeq => Some(ns)
+    case sq: Seq[_] if sq.forall(_.isInstanceOf[Node])=> val ns: NodeSeq = sq.asInstanceOf[Seq[Node]]
+      Some(ns)
+    case _ => None
+  }
+}

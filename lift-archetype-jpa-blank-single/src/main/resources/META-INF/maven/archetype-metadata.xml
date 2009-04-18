@@ -1,0 +1,36 @@
+<archetype-descriptor name="lift-archetype-jpa-basic">
+  <!-- place the master POM into the root dir -->
+  <fileSets>
+    <fileSet filtered="true">
+      <directory></directory>
+      <includes>
+	<include>pom.xml</include>
+	<include>README</include>
+      </includes>
+    </fileSet>
+    <!-- properly place Boot.scala -->
+    <fileSet filtered="true" packaged="false">
+      <directory>src/main/scala/bootstrap/liftweb</directory>
+      <includes>
+	<include>Boot.scala</include>
+      </includes>
+    </fileSet>
+    <fileSet filtered="true" packaged="true">
+      <directory>src/main/scala/</directory>
+      <includes>
+	<include>**/*.scala</include>
+      </includes>
+      <excludes>
+	<exclude>**/Boot.scala</exclude>
+      </excludes>
+    </fileSet>
+    <!-- place templates -->
+    <fileSet filtered="false" packaged="false">
+      <directory>src/main/webapp</directory>
+      <includes>
+	<include>**/*</include>
+	<include>templates-hidden/*</include>
+      </includes>
+    </fileSet>
+  </fileSets>
+</archetype-descriptor>

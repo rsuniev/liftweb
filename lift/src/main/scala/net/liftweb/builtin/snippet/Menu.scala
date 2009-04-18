@@ -16,6 +16,9 @@
 package net.liftweb.builtin.snippet
 
 import _root_.net.liftweb.http.{S, DispatchSnippet, LiftRules}
+import _root_.net.liftweb.http.js._
+import JsCmds._
+import JE._
 import _root_.net.liftweb.sitemap._
 import _root_.net.liftweb.util._
 import Helpers._
@@ -33,12 +36,13 @@ import _root_.scala.xml._
  *
  * <p>More detailed usage of each method is provided below</p>
  */
-class Menu extends DispatchSnippet {
+object Menu extends DispatchSnippet {
   def dispatch: DispatchIt = {
-    case "builder" => ignore => builder
+    case "builder" => builder
     case "title" => title
     case "item" => item
     case "group" => group
+    case "json" => jsonMenu
   }
 
   /**
@@ -54,6 +58,8 @@ class Menu extends DispatchSnippet {
    *   <li>ul - Adds the specified attribute to each &lt;ul&gt; element (top-level and nested children) that makes up the menu</li>
    *   <li>li - Adds the specified attribute to each &lt;li&gt; element for the menu</li>
    *   <li>li_item - Adds the specified attribute to the current page’s menu item</li>
+   *   <li>outer_tag - the tag for the outer XML element (ul by default)</li>
+   *   <li>inner_tag - the tag for the inner XML element (li by default)</li>
    *   <li>li_path - Adds the specified attribute to the current page’s breadcrumb path. The
    *       breadcrumb path is the set of menu items leading to this one.</li>
    * </ul>
@@ -74,19 +80,14 @@ class Menu extends DispatchSnippet {
    *    For instance, you could make the current page menu item red:</p>
    *
    * <pre>
-  *    &lt;lift:Menu.builder li_item:style="color: red;" /&gt;
+   *    &lt;lift:Menu.builder li_item:style="color: red;" /&gt;
    * </pre>
    */
-  def builder: NodeSeq = {
+  def builder(info: NodeSeq): NodeSeq = {
+    val outerTag: String = S.attr("outer_tag") openOr "ul"
+    val innerTag: String = S.attr("inner_tag") openOr "li"
     val expandAll = S.attr("expandAll").isDefined
-    val toRender = {
-      if (expandAll) {
-	for {sm <- LiftRules.siteMap;
-	      req <- S.request} yield sm.buildMenu(req.location).lines
-      } else {
-	S.request.map(_.buildMenu.lines)
-      }
-    } openOr Nil
+    val toRender = renderWhat(expandAll)
 
     toRender.toList match {
       case Nil => Text("No Navigation Defined.")
@@ -97,30 +98,67 @@ class Menu extends DispatchSnippet {
         def buildANavItem(i: MenuItem) = {
           i match {
             case MenuItem(text, uri, kids, true, _, _) if expandAll =>
-              (<li><a href={uri}>{text}</a>{buildUlLine(kids)}</li>) % S.prefixedAttrsToMetaData("li_item", liMap)
+              Elem(null, innerTag, Null, TopScope,
+                   <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) %
+              S.prefixedAttrsToMetaData("li_item", liMap)
+              //(<li><a href={uri}>{text}</a>{buildUlLine(kids)}</li>) % S.prefixedAttrsToMetaData("li_item", liMap)
+
             case MenuItem(text, uri, kids, true, _, _) =>
-              (<li><span>{text}</span>{buildUlLine(kids)}</li>) % S.prefixedAttrsToMetaData("li_item", liMap)
+              Elem(null, innerTag, Null, TopScope, 
+                   <xml:group><span>{text}</span>{buildUlLine(kids)}</xml:group>) %
+              S.prefixedAttrsToMetaData("li_item", liMap)
+
             case MenuItem(text, uri, kids,  _, true, _) =>
-              (<li><a href={uri}>{text}</a>{buildUlLine(kids)}</li>) % S.prefixedAttrsToMetaData("li_path", liMap)
+              Elem(null, innerTag, Null, TopScope, 
+                   <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) %
+              S.prefixedAttrsToMetaData("li_path", liMap)
+
             case MenuItem(text, uri, kids, _, _, _) =>
-              (<li><a href={uri}>{text}</a>{buildUlLine(kids)}</li> % li)
+              Elem(null, innerTag, Null, TopScope, 
+                   <xml:group><a href={uri}>{text}</a>{buildUlLine(kids)}</xml:group>) % li
           }
         }
 
         def buildUlLine(in: Seq[MenuItem]) : NodeSeq =
-	  if (in.isEmpty) {
-	    Text("")
-	  } else {
-	    <ul>{in.flatMap(buildANavItem)}</ul> %
-            S.prefixedAttrsToMetaData("ul")
-	  }
+        if (in.isEmpty) {
+          Text("")
+        } else {
+          Elem(null, outerTag, Null, TopScope,
+               <xml:group>{in.flatMap(buildANavItem)}</xml:group>) %
+          S.prefixedAttrsToMetaData("ul")
+        }
 
         buildUlLine(xs) match {
-	  case top : Elem => top % S.prefixedAttrsToMetaData("top")
-	  case other => other
-	}
+          case top : Elem => top % S.prefixedAttrsToMetaData("top")
+          case other => other
+        }
     }
   }
+
+  private def renderWhat(expandAll: Boolean): Seq[MenuItem] =
+      (if (expandAll) for {sm <- LiftRules.siteMap; req <- S.request} yield
+       sm.buildMenu(req.location).lines
+       else S.request.map(_.buildMenu.lines)) openOr Nil
+
+  def jsonMenu(ignore: NodeSeq): NodeSeq = {
+    val toRender = renderWhat(true)
+
+    def buildItem(in: MenuItem): JsExp =  in match {
+      case MenuItem(text, uri, kids, current, path, _) =>
+        JsObj("text" -> text.toString,
+              "uri" -> uri.toString,
+              "children" -> buildItems(kids),
+              "current" -> current,
+              "path" -> path)
+    }
+
+    def buildItems(in: Seq[MenuItem]): JsExp =
+    JsArray(in.map(buildItem) :_*)
+
+    Script(JsCrVar(S.attr("var") openOr "lift_menu", 
+                   JsObj("menu" -> buildItems(toRender))))
+  }
+
 
   /**
    * <p>Renders the title for the current request path (location). You can use this to
@@ -231,26 +269,26 @@ class Menu extends DispatchSnippet {
    *
    */
   def item(text: NodeSeq): NodeSeq =
-      for (name <- S.attr("name").toList;
-	   request <- S.request.toList;
-	   loc <- request.location.toList)
-      yield {
-    	if (loc.name != name) {
-    	  val itemLink = SiteMap.buildLink(name, text) match {
-    	  	case e : Elem => e % S.prefixedAttrsToMetaData("a")
-            case x => x
-    	  }
-          Group(itemLink)
-	    } else if (S.attr("donthide").isDefined) {
-	      // Use the provided text if it's non-empty, otherwise, default to Loc's LinkText
-	      if (text.length > 0) {
-	        Group(text)
-	      } else {
-	        Group(loc.linkText openOr Text(loc.name))
-	      }
-	    } else {
-	      Text("")
-	    }
+  for (name <- S.attr("name").toList;
+       request <- S.request.toList;
+       loc <- request.location.toList)
+  yield {
+    if (loc.name != name) {
+      val itemLink = SiteMap.buildLink(name, text) match {
+        case e : Elem => e % S.prefixedAttrsToMetaData("a")
+        case x => x
       }
+      Group(itemLink)
+    } else if (S.attr("donthide").isDefined) {
+      // Use the provided text if it's non-empty, otherwise, default to Loc's LinkText
+      if (text.length > 0) {
+        Group(text)
+      } else {
+        Group(loc.linkText openOr Text(loc.name))
+      }
+    } else {
+      Text("")
+    }
+  }
 
 }

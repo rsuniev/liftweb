@@ -1,0 +1,44 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <parent>
+    <groupId>net.liftweb</groupId>
+    <artifactId>lift</artifactId>
+    <version>1.1-SNAPSHOT</version>
+    <relativePath>../pom.xml</relativePath>
+  </parent>
+  <artifactId>lift-archetype-jpa-blank-single</artifactId>
+  <packaging>maven-archetype</packaging>
+  <name>${project.artifactId}</name>
+  <description>Archetype - blank JPA project for Lift in a single project</description>
+  <properties>
+    <lift.version>${project.parent.version}</lift.version>
+    <maven.test.skip>true</maven.test.skip>
+  </properties>
+  <build>
+    <extensions>
+      <extension>
+        <groupId>org.apache.maven.archetype</groupId>
+        <artifactId>archetype-packaging</artifactId>
+        <version>2.0-alpha-4</version>
+      </extension>
+    </extensions>
+    <plugins>
+      <plugin>
+        <artifactId>maven-archetype-plugin</artifactId>
+        <version>2.0-alpha-4</version>
+        <extensions>true</extensions>
+        <configuration>
+          <archetypeArtifactId>${project.artifactId}</archetypeArtifactId>
+          <archetypeGroupId>${project.groupId}</archetypeGroupId>
+          <archetypeVersion>${project.version}</archetypeVersion>
+          <groupId>test</groupId>
+          <artifactId>sample</artifactId>
+          <version>1.0-SNAPSHOT</version>
+          <basedir>${project.build.directory}</basedir>
+          <interactiveMode>false</interactiveMode>
+          <goals>package</goals>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+</project>

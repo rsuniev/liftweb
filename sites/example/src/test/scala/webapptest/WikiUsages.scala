@@ -18,7 +18,7 @@ package webapptest
 import _root_.org.specs._
 import _root_.org.specs.runner._
 import _root_.net.sourceforge.jwebunit.junit.WebTester
-/*
+
 class WikiUsagesTest extends Runner(WikiUsages) with JUnit with Console
 object WikiUsages extends Specification {
   JettyTestServer.start()
@@ -55,4 +55,4 @@ object WikiUsages extends Specification {
 
   //JettyTestServer.stop()
 }
-*/
+

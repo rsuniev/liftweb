@@ -1,7 +1,7 @@
 package net.liftweb.util
 
 /*
- * Copyright 2007-2008 WorldWide Conferencing, LLC
+ * Copyright 2007-2009 WorldWide Conferencing, LLC
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -121,22 +121,24 @@ object Props {
    * The resource path segment corresponding to the current system user
    * (from System.getProperty("user.name"))
    */
-  val userName = System.getProperty("user.name") + "."
+  lazy val userName = System.getProperty("user.name") + "."
+
+  /**
+  * Is the app running in the Google App engine (the System property in.gae.j is set)
+  */
+  lazy val inGAE: Boolean = System.getProperty("in.gae.j") != null
 
   /**
    * The resource path segment corresponding to the system hostname.
    */
-  // TODO InetAddress is not available on GAE/J
-  // Should it be configurable in Boot.scala?
-  //val hostName = InetAddress.getLocalHost.getHostName + "."
-  val hostName = "GAE/J" + "."
+  lazy val hostName: String = if (inGAE) "GAE" else InetAddress.getLocalHost.getHostName + "."
 
   /**
    * The list of paths to search for property file resources.
    * Properties files may be found at either the classpath root or
    * in /props
    */
-  val toTry: List[() => String] = List(
+  lazy val toTry: List[() => String] = List(
                  () => "/props/" + modeName + userName + hostName,
 					       () => "/props/" + modeName + userName,
 					       () => "/props/" + modeName + hostName,
@@ -149,7 +151,7 @@ object Props {
   /**
    * The map of key/value pairs retrieved from the property file.
    */
-  val props = {
+  lazy val props = {
     // find the first property file that is available
     first(toTry)(f => tryo(getClass.getResourceAsStream(f()+"props")).filter(_ ne null)).map{s => val ret = new Properties; ret.load(s); ret} match {
 
