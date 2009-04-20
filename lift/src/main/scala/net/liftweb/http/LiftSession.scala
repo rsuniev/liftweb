@@ -393,7 +393,8 @@ class LiftSession(val contextPath: String, val uniqueId: String,
     try {
       if (running_?) this.shutDown()
     } finally {
-      Actor.clearSelf
+      if (!Props.inGAE)
+        Actor.clearSelf
     }
   }
 
@@ -424,11 +425,12 @@ class LiftSession(val contextPath: String, val uniqueId: String,
       onSessionEnd.foreach(_(this))
 
       LiftSession.onAboutToShutdownSession.foreach(_(this))
-      SessionMaster.sendMsg(RemoveSession(this.uniqueId))
-
 
       // Log.debug("Shutting down session")
       running_? = false
+
+      SessionMaster.sendMsg(RemoveSession(this.uniqueId))
+
       asyncComponents.foreach{case (_, comp) => tryo(comp ! ShutDown)}
       cleanUpSession()
       LiftSession.onShutdownSession.foreach(_(this))
